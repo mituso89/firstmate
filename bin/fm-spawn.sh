@@ -122,7 +122,7 @@
 #   profile consultation. A --secondmate spawn is exempt and resolves the SECONDMATE
 #   harness (config/secondmate-harness -> config/crew-harness -> own), so the
 #   secondmate-vs-crewmate split is DURABLE across every respawn (recovery,
-#   /updatefirstmate, restart). A bare adapter name (claude|codex|opencode|pi|pi-signed|grok|kimi|cursor|gemini|muse|rovo|omp)
+#   /updatefirstmate, restart). A bare adapter name (claude|codex|opencode|pi|pi-signed|grok|kimi|cursor|gemini|muse|rovo|omp|devin)
 #   overrides it for this spawn (either kind). A non-flag string containing
 #   whitespace is treated as a RAW launch command - the escape hatch for verifying
 #   new adapters. For pi and pi-signed, fm-spawn resolves the selected executable
@@ -1317,7 +1317,7 @@ if [ "$RELAUNCH" -eq 1 ]; then
   }
 elif [ "$KIND" = secondmate ]; then
   case "${POS[1]:-}" in
-    ''|claude|codex|opencode|pi|pi-signed|grok|kimi|cursor|gemini|muse|rovo|omp)
+    ''|claude|codex|opencode|pi|pi-signed|grok|kimi|cursor|gemini|muse|rovo|omp|devin)
       ARG3=${POS[1]:-}
       ;;
     *' '*)
@@ -1473,6 +1473,21 @@ launch_template() {
     # launch command - it is a Stop-event hook installed below (global hook +
     # per-task pointer), so the template is identical for ship/scout/secondmate.
     grok) printf '%s' 'grok --always-approve __MODELFLAG____EFFORTFLAG__"$(__OPINPUT__ encode launch-brief < __BRIEF__)"' ;;
+    # devin (Devin CLI): a prompt AFTER `--` starts a supervised interactive
+    # session (verified: `devin -- "<prompt>"`). --permission-mode dangerous
+    # (aliases yolo/bypass) auto-approves every tool so an unattended crewmate
+    # never blocks on an approval gate - the targeted equivalent of claude's
+    # --dangerously-skip-permissions. Devin exposes --model but NO effort flag,
+    # so the shared effort axis is omitted and stays in task metadata only (like
+    # cursor/kimi). Devin's turn-end signal does NOT ride the launch command - it
+    # is a Stop-event hook written into the worktree's .devin/hooks.v1.json below
+    # (touches __TURNEND__), so the template is identical for ship/scout/secondmate.
+    # devin publishes no identity marker of its own and is detected by ancestry
+    # only, so the foreign primary markers are cleared at the launch boundary
+    # (claude/pi/grok here, cursor/gemini via the shared outer wrap below) exactly
+    # as muse and gemini do - otherwise a devin worker under one of those primaries
+    # would inherit its marker and be misread by bin/fm-harness.sh.
+    devin) printf '%s' 'env -u CLAUDECODE -u PI_CODING_AGENT -u GROK_AGENT -u FM_PI_HARNESS devin --permission-mode dangerous __MODELFLAG__-- "$(__OPINPUT__ encode launch-brief < __BRIEF__)"' ;;
     # Cursor Agent CLI. --trust suppresses the workspace-trust prompt, which
     # --yolo does NOT cover and which would otherwise block every spawn, since
     # each task gets a fresh worktree path cursor has never seen. --yolo is the
@@ -1637,6 +1652,16 @@ fi
 # standing one up with no way to arm its watch cycle.
 if [ "$KIND" = secondmate ] && [ "$HARNESS" = rovo ]; then
   echo "error: rovo is a verified crewmate/scout adapter only and cannot run a secondmate; it has no primary supervision protocol. Select a harness verified for secondmates." >&2
+  exit 1
+fi
+
+# devin is verified as a CREWMATE/SCOUT adapter only. A secondmate is a firstmate
+# instance needing a primary supervision cycle (turn-end guard primary integration,
+# Stop auto-arm). devin's primary hooks are not yet wired or verified, so a
+# secondmate is refused loudly rather than stood up on an unproven supervision path.
+# Lift this once the devin primary integration lands and is verified.
+if [ "$KIND" = secondmate ] && [ "$HARNESS" = devin ]; then
+  echo "error: devin is a verified crewmate/scout adapter only and cannot run a secondmate yet; its primary supervision integration is not verified. Select a harness verified for secondmates." >&2
   exit 1
 fi
 
@@ -1818,7 +1843,7 @@ model_flag_for_harness() {
   local harness=$1 model=$2
   [ -n "$model" ] && [ "$model" != default ] || return 0
   case "$harness" in
-    claude|codex|opencode|pi|pi-signed|grok|kimi|cursor|gemini|muse|rovo|omp)
+    claude|codex|opencode|pi|pi-signed|grok|kimi|cursor|gemini|muse|rovo|omp|devin)
       printf -- '--model %s ' "$(shell_quote "$model")"
       ;;
   esac
@@ -3167,7 +3192,7 @@ if [ "$KIND" != secondmate ]; then
       ;;
   esac
   case "$HARNESS" in
-    claude*|opencode*|pi|pi-signed|omp)
+    claude*|opencode*|pi|pi-signed|omp|devin)
       BUSY_GEN=$("$FM_ROOT/bin/fm-busy-event.sh" arm "$STATE_REAL" "$ID") || {
         echo "error: failed to arm the busy-state contract for $ID" >&2
         exit 1
@@ -3250,6 +3275,27 @@ EOF
 {"hooks":{"BeforeAgent":[{"hooks":[{"type":"command","command":"$g_before"}]}],"AfterAgent":[{"hooks":[{"type":"command","command":"$g_after"}]}],"SessionEnd":[{"hooks":[{"type":"command","command":"$g_sessionend"}]}]}}
 EOF
       fi
+      ;;
+    devin)
+      # Devin shares Claude's hook dialect (bin/fm-busy-lib.sh): UserPromptSubmit
+      # opens a turn; Stop (normal completion) and SessionEnd (process shutdown)
+      # close it, so an abnormal end can never leave a stale busy record. Devin
+      # emits no StopFailure event, so unlike Claude there is no API-error close
+      # hook - SessionEnd is the backstop. Stop also keeps the turn-ended
+      # NOTIFICATION touch for the watcher. Written to .devin/hooks.v1.json, whose
+      # ENTIRE file is the hooks object (no "hooks" wrapper key, unlike Claude's
+      # settings.local.json). Every hook command tolerates a refused event
+      # (|| true) so a stale-gen writer can never break Devin's own lifecycle.
+      mkdir -p "$WT/.devin"
+      busy_cmd_prefix="$(shell_quote "$FM_ROOT/bin/fm-busy-event.sh") apply $(shell_quote "$STATE_REAL") $(shell_quote "$ID")"
+      busy_suffix="--gen $(shell_quote "$BUSY_GEN") --source devin-hook"
+      j_submit=$(json_escape "$busy_cmd_prefix busy $busy_suffix --event user-prompt-submit 2>/dev/null || true")
+      j_stop=$(json_escape "touch $(shell_quote "$TURNEND"); $busy_cmd_prefix idle $busy_suffix --event stop 2>/dev/null || true")
+      j_sessionend=$(json_escape "$busy_cmd_prefix idle $busy_suffix --event session-end 2>/dev/null || true")
+      cat > "$WT/.devin/hooks.v1.json" <<EOF
+{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"$j_submit"}]}],"Stop":[{"hooks":[{"type":"command","command":"$j_stop"}]}],"SessionEnd":[{"hooks":[{"type":"command","command":"$j_sessionend"}]}]}
+EOF
+      exclude_path '.devin/hooks.v1.json'
       ;;
     opencode*)
       mkdir -p "$WT/.opencode/plugins"
@@ -3745,7 +3791,7 @@ case "$HARNESS" in
 esac
 LAUNCH=${LAUNCH//__WORKTREE__/$sq_worktree}
 case "$HARNESS" in
-  claude|codex|opencode|pi|pi-signed|grok|kimi|gemini|muse|rovo)
+  claude|codex|opencode|pi|pi-signed|grok|kimi|gemini|muse|rovo|devin)
     LAUNCH="env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI $LAUNCH"
     ;;
 esac

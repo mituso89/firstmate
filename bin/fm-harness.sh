@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Detect the agent harness this process tree runs on.
-# Usage: fm-harness.sh                  print own harness: claude|codex|opencode|pi|pi-signed|grok|kimi|cursor|gemini|muse|rovo|omp|unknown
+# Usage: fm-harness.sh                  print own harness: claude|codex|opencode|pi|pi-signed|grok|kimi|cursor|gemini|muse|rovo|omp|devin|unknown
 #        fm-harness.sh crew             print the effective CREWMATE harness
 #                                        (config/crew-harness; "default" resolves to own)
 #        fm-harness.sh secondmate       print the harness the PRIMARY uses to launch
@@ -104,6 +104,14 @@ detect_own() {
   # identified, and any rule that must be RELIABLE under grok has to test the hook
   # markers too (see .claude/settings.json Stop entries, docs/turnend-guard.md).
   [ "${GROK_AGENT:-}" = "1" ] && { echo grok; return; }
+  # devin (Devin CLI, internal name "chisel") is detected by ANCESTRY ONLY (below),
+  # deliberately not by an env marker. It does export CHISEL_SESSION_DB to its tool
+  # subprocesses (verified live 2026-09-03 on devin 3000.6.12), but promoting that
+  # to a Layer-1 marker would misidentify a markerless crewmate (codex, opencode,
+  # kimi, muse) launched from a devin primary, which inherits CHISEL_SESSION_DB
+  # before its own ancestry is consulted - the precedence hazard described above.
+  # The parent-chain "devin" match is unambiguous and was verified live, so it is
+  # the guarantee without the hazard.
   # muse (Muse Code) publishes no harness-identity marker of its own. The only
   # MUSE_* variable it is documented to hand a child is MUSE_CURRENT_SESSION_LOG,
   # a per-session log PATH rather than an identity, and its export to tool
@@ -142,6 +150,10 @@ detect_own() {
       *codex*) echo codex; return ;;
       *opencode*) echo opencode; return ;;
       *grok*) echo grok; return ;;
+      # devin's installed launcher execs a native "devin" binary (verified live
+      # 2026-09-03, devin 3000.6.12: parent comm=devin). Anchored to the exact
+      # name so unrelated commands cannot be misread.
+      devin) echo devin; return ;;
       kimi) echo kimi; return ;;
       rovo) echo rovo; return ;;
       # muse's installed launcher ~/.local/bin/muse execs ~/.local/bin/muse-bin-<version>

@@ -23,7 +23,7 @@ make_spawn_case() {  # <name> <harness> <id>
   home="$case_dir/home"
   proj="$case_dir/project"
   wt="$case_dir/wt"
-  fakebin=$(make_spawn_fakebin "$case_dir/fake" pi opencode claude codex gemini)
+  fakebin=$(make_spawn_fakebin "$case_dir/fake" pi opencode claude codex gemini devin)
   fm_test_spawn_home "$home" "$harness"
   fm_git_worktree "$proj" "$wt" "wt-$name"
   fm_test_spawn_brief "$home" "$id"
@@ -399,6 +399,88 @@ test_gemini_is_refused_as_a_secondmate() {
   pass "gemini is refused as a secondmate because it has no primary supervision protocol"
 }
 
+# Devin shares Claude's hook dialect, but its file is .devin/hooks.v1.json whose
+# ENTIRE contents are the events object - there is no outer "hooks" wrapper key -
+# and Devin emits no StopFailure event.
+run_devin_hook() {  # <hooks.v1.json> <hook-event>
+  local cmd
+  cmd=$(jq -r ".[\"$2\"][0].hooks[0].command" "$1")
+  [ -n "$cmd" ] && [ "$cmd" != null ] || fail "no $2 hook command in $1"
+  sh -c "$cmd"
+}
+
+test_devin_hooks_semantic_lifecycle() {
+  local rec id=busy-dv-1 out state hooks
+  rec=$(make_spawn_case devin-lifecycle devin "$id")
+  read_case_record "$rec"
+  out=$(run_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$id" "$PROJ_DIR")
+  expect_code 0 $? "devin spawn should succeed: $out"
+  state="$HOME_DIR/state"
+  hooks="$WT_DIR/.devin/hooks.v1.json"
+  assert_present "$hooks" "devin spawn did not write hook settings"
+  jq -e . "$hooks" >/dev/null || fail "devin hook settings are not valid JSON"
+  jq -e 'has("hooks") | not' "$hooks" >/dev/null \
+    || fail "devin hook file must have no outer \"hooks\" wrapper key"
+  for ev in UserPromptSubmit Stop SessionEnd; do
+    jq -e ".[\"$ev\"]" "$hooks" >/dev/null || fail "devin hook settings lack $ev"
+  done
+  jq -e 'has("StopFailure")' "$hooks" >/dev/null \
+    && fail "devin emits no StopFailure event and must not wire one"
+
+  out=$(classify devin "$id" "$state")
+  [ "$out" = "busy fm-spawn" ] || fail "seed after spawn must be 'busy fm-spawn', got '$out'"
+
+  rm -f "$state/$id.turn-ended"
+  run_devin_hook "$hooks" Stop || fail "Stop hook command failed"
+  [ -f "$state/$id.turn-ended" ] || fail "Stop must touch the turn-end notification marker"
+  out=$(classify devin "$id" "$state")
+  [ "$out" = "idle devin-hook" ] || fail "Stop must classify 'idle devin-hook', got '$out'"
+
+  run_devin_hook "$hooks" UserPromptSubmit || fail "UserPromptSubmit hook command failed"
+  out=$(classify devin "$id" "$state")
+  [ "$out" = "busy devin-hook" ] || fail "UserPromptSubmit must classify 'busy devin-hook', got '$out'"
+
+  run_devin_hook "$hooks" SessionEnd || fail "SessionEnd hook command failed"
+  out=$(classify devin "$id" "$state")
+  [ "$out" = "idle devin-hook" ] || fail "SessionEnd must classify idle so an abnormal end cannot strand busy, got '$out'"
+  pass "devin hooks open on UserPromptSubmit and close on Stop and SessionEnd, with no StopFailure wiring"
+}
+
+test_devin_launch_clears_foreign_primary_markers() {
+  local rec id=busy-dv-3 out launch
+  rec=$(make_spawn_case devin-markers devin "$id")
+  read_case_record "$rec"
+  launch="$CASE_DIR/launch.log"
+  : > "$launch"
+  out=$(FM_FAKE_LAUNCH_LOG="$launch" \
+    run_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$id" "$PROJ_DIR")
+  expect_code 0 $? "devin spawn should succeed: $out"
+  # devin has no identity marker of its own and is ancestry-detected, so the
+  # launch must strip every foreign primary marker or a devin worker under one
+  # of those primaries would be misread by bin/fm-harness.sh.
+  for marker in CLAUDECODE PI_CODING_AGENT GROK_AGENT FM_PI_HARNESS \
+    CURSOR_AGENT CURSOR_INVOKED_AS GEMINI_CLI; do
+    assert_contains "$(cat "$launch")" "-u $marker" \
+      "devin launch did not clear the inherited $marker marker"
+  done
+  pass "devin launch clears every foreign primary identity marker"
+}
+
+test_devin_is_refused_as_a_secondmate() {
+  local rec id=busy-dv-2 out
+  rec=$(make_spawn_case devin-secondmate devin "$id")
+  read_case_record "$rec"
+  # A secondmate spawn carries no delivery contract, so this one deliberately
+  # bypasses run_spawn's ship-only --mode/--yolo arguments.
+  out=$(GROK_HOME="$HOME_DIR/grok-home" \
+    fm_test_run_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" --secondmate "$id" devin) && {
+    fail "a devin secondmate must be refused, its primary supervision integration is not verified: $out"
+  }
+  assert_contains "$out" 'crewmate/scout adapter only' \
+    "refusing a devin secondmate must name the crewmate/scout boundary: $out"
+  pass "devin is refused as a secondmate because its primary supervision integration is not verified"
+}
+
 test_kimi_and_grok_install_no_unverified_wiring() {
   local state out
   state="$TMP_ROOT/gates/state"
@@ -425,6 +507,9 @@ test_gemini_hooks_semantic_lifecycle
 test_gemini_hooks_stale_incarnation_harmless
 test_raw_gemini_launch_has_no_semantic_wiring
 test_gemini_is_refused_as_a_secondmate
+test_devin_hooks_semantic_lifecycle
+test_devin_launch_clears_foreign_primary_markers
+test_devin_is_refused_as_a_secondmate
 test_codex_unverified_until_a_semantic_source_exists
 
 echo "all fm-busy-adapter-wiring tests passed"
