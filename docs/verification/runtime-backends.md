@@ -871,6 +871,39 @@ teardown gm2 complete; state/gm2.gemini-settings.json removed
 Gemini as a PRIMARY or SECONDMATE runtime is unverified and is refused by `bin/fm-spawn.sh`: no wake protocol exists under `docs/supervision-protocols/` and no turn-end guard adapter was built or exercised.
 No reasoning-effort axis was found; `gemini --help` on 0.58.0 exposes no effort, reasoning, or thinking flag, so the record-and-omit contract applies.
 
+## Devin
+
+The Devin crewmate/scout adapter was verified live on 2026-09-17 with devin 3000.10.31 on Linux (WSL2), tmux 3.4, through the canonical `bin/fm-spawn.sh --scout --harness devin --backend tmux` path.
+The spawn ran in a throwaway Firstmate home on a private tmux socket (`tmux -L <name>`, reached through `TMUX`) against a throwaway git project, and the scout was cleaned up with `bin/fm-teardown.sh`.
+
+### Launch, hooks, and state
+
+The launch showed no trust or permission dialog on a fresh Treehouse worktree under `--permission-mode dangerous`, and the brief started processing immediately.
+The worktree's `.devin/hooks.v1.json` fired both halves of the busy contract:
+
+```text
+v1 gen=g1789662727.2526531.16495 seq=2 state=busy source=devin-hook event=user-prompt-submit ts=1789662730
+v1 gen=g1789662727.2526531.16495 seq=3 state=idle source=devin-hook event=stop ts=1789662782
+```
+
+The `Stop` hook also touched `state/<id>.turn-ended`, and `bin/fm-crew-state.sh` read `working · source: pane · harness busy (devin-hook)` mid-turn and `done · source: status-log` afterwards.
+A `bin/fm-send.sh` steer was read, acted on, and acknowledged by moving the inbox record to `handled/`.
+
+### Interrupt and exit
+
+The running-turn footer reads `(esc twice to interrupt)`.
+One Escape left the turn running (`busy`, spinner still live); two Escapes 0.2-0.3s apart printed `Canceled. What should Devin do?` with an empty composer.
+On an already-idle Devin, two Escapes open a rewind picker (`type search · ↑↓ select · ↵ revert · esc cancel`) and one more Escape closes it; three Escapes on an idle composer leave it idle.
+A cancelled turn fires no hook, so the busy record stays `busy`, the same as Claude's manual interrupt; `bin/fm-control.sh exit` therefore interrupts first, which is why the adapter sends Escape, Escape, then one closing Escape.
+With that sequence `bin/fm-control.sh <id> interrupt` cancelled a thinking turn and was a no-op on an idle one, and `bin/fm-control.sh <id> exit` printed `stopped ... harness=devin backend=tmux` and returned the pane to its shell.
+The empty composer renders `❭` followed by a grey (RGB 124) placeholder that ghost stripping removes; typed text classified `pending` and Ctrl-U returned it to `empty`.
+
+### Not verified
+
+Devin as a PRIMARY or SECONDMATE runtime is unverified and refused: `bin/fm-supervision-instructions.sh --harness devin` falls back to the unknown-harness mode, and `bin/fm-spawn.sh <id> --secondmate devin` refuses.
+Herdr placement of a Devin worker was not exercised; its process-level liveness relies on the same anchored `devin` process name the tmux probe reads.
+Background shells a Devin turn started (Devin moves a long foreground command into a background shell after about ten seconds) survived `/exit` and had to be stopped by PID.
+
 ## Herdr
 
 The compatibility floor is protocol 14.

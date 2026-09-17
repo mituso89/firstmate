@@ -9,8 +9,8 @@
 #      (unsafe-for-injection), never `empty`. This is the safety fix.
 #   2. The SAME shell glyph INSIDE a bordered composer box is the harness's own
 #      prompt and still reads `empty` (existing behavior preserved).
-#   3. The AGENT prompt glyphs `❯` (claude), `›` (codex), `⟩` (muse), and `→`
-#      (cursor) are a genuine empty agent composer either way, bordered or bare.
+#   3. The AGENT prompt glyphs `❯` (claude), `›` (codex), `⟩` (muse), `→`
+#      (cursor), and `❭` (devin) are a genuine empty agent composer either way, bordered or bare.
 #   4. Real unsubmitted text reads `pending`; a known idle placeholder reads
 #      `empty`.
 set -u
@@ -201,6 +201,20 @@ test_matrix_codex_dim_hint_row() {
   assert_screen "codex idle on zellij" empty "$CAPS_STYLED_NOID" "$styled"
   assert_screen "codex idle on plain backends" unknown "$CAPS_PLAIN" "$plain"
   pass "matrix: codex's dim hint is empty when styling proves it, unknown (never pending) when it cannot"
+}
+
+test_matrix_devin_grey_placeholder_row() {
+  # Real idle devin (3000.10.31): a default-colour `❭` then a grey
+  # (38;2;124;124;124) placeholder, between dark rules. Styled captures strip
+  # the placeholder as ghost text and prove empty; typed text stays pending.
+  local rule styled typed
+  rule="${ESC}[38;2;68;68;68m────────────────────────${ESC}[39m"
+  styled=$'transcript\n'"$rule"$'\n'"❭ ${ESC}[38;2;124;124;124mAsk Devin to build features, fix bugs, or work on your code${ESC}[39m"$'\n'"$rule"
+  typed=$'transcript\n'"$rule"$'\n'"❭ hello pending"$'\n'"$rule"
+  assert_screen "devin idle on tmux" empty "$CAPS_TMUX" "$styled" 2 probe-absent
+  assert_screen "devin idle on herdr" empty "$CAPS_STYLED" "$styled" '' probe-absent
+  assert_screen "devin typed on tmux" pending "$CAPS_TMUX" "$typed" 2 probe-absent
+  pass "matrix: devin's grey placeholder reads empty and typed text reads pending"
 }
 
 test_matrix_muse_truecolor_glyph_survives_signal_loss() {
@@ -784,6 +798,7 @@ test_idle_placeholder_case_mode_is_explicit
 test_real_text_is_pending
 test_matrix_claude_bare_nbsp_row
 test_matrix_codex_dim_hint_row
+test_matrix_devin_grey_placeholder_row
 test_matrix_muse_truecolor_glyph_survives_signal_loss
 test_matrix_cursor_reverse_video_placeholder_remnant
 test_matrix_herdr_halfblock_rule_bounds_bare_wrap

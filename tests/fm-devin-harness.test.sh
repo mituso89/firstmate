@@ -119,9 +119,9 @@ test_devin_control_mechanics_are_the_verified_ones() {
   out=$(fm_control_interrupt_key devin)
   [ "$out" = Escape ] || fail "devin interrupts on Escape, got '$out'"
   out=$(fm_control_interrupt_repeat devin)
-  [ "$out" = 1 ] || fail "devin interrupts on a single press, got '$out'"
+  [ "$out" = 2 ] || fail "devin interrupts on a double press, got '$out'"
   out=$(fm_control_interrupt_clear_key devin)
-  [ -z "$out" ] || fail "devin needs no composer clear key, got '$out'"
+  [ "$out" = Escape ] || fail "devin closes a stray rewind picker with one more Escape, got '$out'"
   out=$(fm_control_interrupt_ack_source devin)
   [ "$out" = none ] || fail "devin has no interrupt acknowledgement source, got '$out'"
   out=$(fm_control_exit_command devin)

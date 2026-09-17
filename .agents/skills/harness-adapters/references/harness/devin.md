@@ -1,6 +1,6 @@
 # Devin
 
-Adapter facts sourced from Devin CLI 3000.6.12 (docs + `devin --help`) and live self-detection on 2026-09-03.
+Adapter facts sourced from Devin CLI 3000.6.12 (docs + `devin --help`) and live self-detection on 2026-09-03, then verified live end to end on devin 3000.10.31 on 2026-09-17 (`../../../docs/verification/runtime-backends.md` "Devin").
 Devin is verified for crewmate and scout work only; it is refused as a secondmate and primary until its primary supervision integration lands (see `../../../bin/fm-spawn.sh`).
 
 ## Operating facts
@@ -11,9 +11,10 @@ Devin is verified for crewmate and scout work only; it is refused as a secondmat
 | Busy | Owned hooks in the worktree's `.devin/hooks.v1.json`: `UserPromptSubmit` opens a turn; `Stop` and `SessionEnd` close it. Devin emits no `StopFailure`, so `SessionEnd` is the abnormal-end backstop. Source name `devin-hook` (`../../../bin/fm-busy-lib.sh`). |
 | Turn-end | The `Stop` hook also touches `state/<id>.turn-ended` for the watcher, like codex's `notify`. |
 | Exit | `/exit` (alias `/quit`; bare `exit`/`quit` also work). |
-| Interrupt | Single `Escape` cancels the running agent (`Ctrl+C` also cancels; Escape is used, matching Claude). |
+| Interrupt | Double `Escape` cancels a running turn with an empty composer; a single press does not. On an idle Devin a double Escape opens a rewind picker, so the control plane follows with one closing Escape (`../../../bin/fm-control-lib.sh`). A cancel fires no hook, so the busy record stays busy, as with Claude. |
 | Skill | `/<skill>`, e.g. `/no-mistakes`. |
 | Model | `--model <model>`; accepts fuzzy names (family slug, alias, or partial, e.g. `--model opus`). Discover with `devin models`. |
+| Composer | `❭` plus a grey placeholder, read as empty by the shared composer classifier; typed text reads pending. |
 | Effort | None. Devin exposes no effort/reasoning CLI flag (thinking level is interactive, `Alt+T`), so the shared effort axis stays in task metadata only, like cursor/kimi. |
 
 ## Detection
@@ -28,11 +29,9 @@ Because Devin has no marker of its own, the reverse hazard also holds: a Devin w
 Devin reuses Claude's hook schema, so the busy wiring mirrors the Claude adapter exactly, with two differences: the file is `.devin/hooks.v1.json` whose ENTIRE contents are the hooks object (no outer `"hooks"` wrapper key), and there is no `StopFailure` event.
 Devin also reads `.claude/settings.json` hooks when `read_config_from.claude` is enabled, but firstmate writes the native `.devin/hooks.v1.json` to stay independent of that toggle.
 
-## Live-verification gate
+## Live verification
 
-The following ride Devin's docs and its Claude-compatible dialect but still need a live end-to-end spawn to confirm before treating the adapter as fully proven, per `../firstmate-coding-guidelines/SKILL.md` "Harness-dependent checks":
-Stop/UserPromptSubmit hook firing in an interactive `--permission-mode dangerous` pane; a single Escape cancelling a turn without repolluting the composer (so no clear key is needed); `/exit` leaving the composer cleanly; and whether a fresh worktree path raises any trust/permission dialog under `dangerous` mode.
-Record the dated result in `../../../docs/verification/runtime-backends.md`.
+Hook firing, trust behaviour (none under `dangerous`), steering, interrupt, and `/exit` were verified live through tmux; the dated record and what remains unverified (Herdr placement, background shells surviving `/exit`) live in `../../../docs/verification/runtime-backends.md` "Devin".
 
-`../../../tests/fm-devin-harness.test.sh` is the portable regression: it pins ancestry detection (including that `CHISEL_SESSION_DB` is not a marker), the control-lib interrupt and exit table, the crewmate/scout-only kind gate, the `.devin/hooks.v1.json` wiring path, the `devin-hook` busy source, and the loud secondmate refusal, all with real processes and no harness.
-A live guard in the `live-harness-optin` family is still pending: Devin is not installed as a test dependency on the CI lanes, so the live spawn check above is run by hand before the first real dispatch.
+`../../../tests/fm-devin-harness.test.sh` is the portable regression: it pins ancestry detection (including that `CHISEL_SESSION_DB` is not a marker), the control-lib interrupt and exit table, the tmux/Herdr process-name classifier, the crewmate/scout-only kind gate, the `.devin/hooks.v1.json` wiring path, the `devin-hook` busy source, and the loud secondmate refusal, all with real processes and no harness.
+A live guard in the `live-harness-optin` family is still pending: Devin is not installed as a test dependency on the CI lanes, so the live spawn check is repeated by hand after a Devin upgrade.

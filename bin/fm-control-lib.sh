@@ -126,9 +126,8 @@ fm_control_harness_supports_kind() {  # <harness> <kind>
 # with an idle composer and no repollution (verified live, agy 1.2.0 through
 # Herdr). omp (Oh My Pi) shares Pi's single Escape, empty composer
 # afterwards, and /quit exit (verified omp 18.1.2 in a PTY, re-verified 18.1.11
-# through Herdr). devin is expected to share claude's single Escape through its
-# Claude-compatible dialect; that cancel path is on devin.md's live-verification
-# gate, not yet proven in a pane.
+# through Herdr). devin cancels on Escape too, but only on a double press (see
+# fm_control_interrupt_repeat).
 fm_control_interrupt_key() {  # <harness>
   case "${1-}" in
     claude|codex|opencode|pi|pi-signed|omp|kimi|cursor|gemini|muse|rovo|agy|devin) printf 'Escape' ;;
@@ -137,12 +136,15 @@ fm_control_interrupt_key() {  # <harness>
   esac
 }
 
-# How many times the interrupt key must be delivered. OpenCode needs a double
-# Escape; every other verified adapter interrupts on a single press.
+# How many times the interrupt key must be delivered. OpenCode and Devin need a
+# double Escape (devin 3000.10.31 renders "esc twice to interrupt": one press
+# left a live turn running, two presses 0.2-0.3s apart cancelled it with an
+# empty composer, verified live through tmux); every other verified adapter
+# interrupts on a single press.
 fm_control_interrupt_repeat() {  # <harness>
   case "${1-}" in
-    opencode) printf '2' ;;
-    claude|codex|pi|pi-signed|omp|grok|kimi|cursor|gemini|muse|rovo|agy|devin) printf '1' ;;
+    opencode|devin) printf '2' ;;
+    claude|codex|pi|pi-signed|omp|grok|kimi|cursor|gemini|muse|rovo|agy) printf '1' ;;
     *) return 1 ;;
   esac
 }
@@ -157,13 +159,19 @@ fm_control_interrupt_repeat() {  # <harness>
 # follow-up` placeholder, so it needs no clear key. gemini was checked the
 # same way and also does not repollute: after a single Escape it prints
 # `Request cancelled.` and its composer shows only the `Type your message
-# or @path/to/file` placeholder. Prints the key or nothing;
+# or @path/to/file` placeholder. devin does not repollute either, but its
+# double Escape is a rewind-picker shortcut when the agent is already idle,
+# which the busy record cannot rule out because a cancelled turn fires no
+# hook; one more Escape closes that picker and is a no-op on the empty
+# composer a real cancel leaves (verified live on devin 3000.10.31 through
+# tmux, busy and idle). Prints the key or nothing;
 # a harness with no verified mechanics returns nonzero, matching the tables
 # above.
 fm_control_interrupt_clear_key() {  # <harness>
   case "${1-}" in
     muse) printf 'C-u' ;;
-    claude|codex|opencode|pi|pi-signed|omp|grok|kimi|cursor|gemini|rovo|agy|devin) ;;
+    devin) printf 'Escape' ;;
+    claude|codex|opencode|pi|pi-signed|omp|grok|kimi|cursor|gemini|rovo|agy) ;;
     *) return 1 ;;
   esac
 }
