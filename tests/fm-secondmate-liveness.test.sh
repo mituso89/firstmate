@@ -165,7 +165,9 @@ test_herdr_agent_state_preserves_husk_classifier() {
   for row in 'dead missing' 'no-agent dead' 'live alive' 'unknown unreadable'; do
     pane_state=${row%% *}
     expected=${row#* }
-    out=$(FM_TEST_PANE_STATE="$pane_state" bash -c '. "$0/bin/backends/herdr.sh"; fm_backend_herdr_pane_agent_state() { printf "%s" "$FM_TEST_PANE_STATE"; }; fm_backend_herdr_agent_state "sess:p1"' "$ROOT")
+    # The base PATH keeps a host-installed herdr out of reach, so its view of
+    # the fixture session cannot replace the stubbed pane state under test.
+    out=$(PATH="$BASE_PATH" FM_TEST_PANE_STATE="$pane_state" bash -c '. "$0/bin/backends/herdr.sh"; fm_backend_herdr_pane_agent_state() { printf "%s" "$FM_TEST_PANE_STATE"; }; fm_backend_herdr_agent_state "sess:p1"' "$ROOT")
     [ "$out" = "$expected" ] || fail "Herdr pane state $pane_state should map to $expected, got '$out'"
   done
 
