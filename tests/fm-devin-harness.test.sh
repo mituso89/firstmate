@@ -161,6 +161,18 @@ test_devin_busy_source_is_devin_hook() {
   pass "bin/fm-busy-lib.sh: devin's semantic busy source is devin-hook"
 }
 
+test_devin_tmux_names_the_native_binary_an_agent() {
+  local got
+  # shellcheck source=/dev/null
+  . "$ROOT/bin/fm-backend.sh"
+  fm_backend_source tmux || fail "fm_backend_source tmux failed"
+  got=$(fm_agent_process_classify_name devin)
+  [ "$got" = agent ] || fail "tmux liveness must read the devin binary as an agent, got '$got'"
+  got=$(fm_agent_process_classify_name devinator)
+  [ "$got" = other ] || fail "tmux liveness must not read devinator as an agent, got '$got'"
+  pass "bin/fm-agent-process-lib.sh: devin is an agent, look-alike names are not"
+}
+
 test_devin_secondmate_spawn_is_refused() {
   local id home fakebin rc out
   id="devin-secondmate-$$"
@@ -187,4 +199,5 @@ test_devin_control_mechanics_are_the_verified_ones
 test_devin_is_crewmate_and_scout_only
 test_devin_wiring_is_the_worktree_hooks_file
 test_devin_busy_source_is_devin_hook
+test_devin_tmux_names_the_native_binary_an_agent
 test_devin_secondmate_spawn_is_refused

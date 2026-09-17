@@ -788,8 +788,30 @@ test_late_owner_keeps_failure_episode_suppressed() {
   pass 'a late owner does not restart a shared forge failure episode'
 }
 
+test_large_backlog_contribution_input() {
+  local home out i
+  home=$(new_home large-backlog)
+  record "$home" delivery 17 open mergeable
+  # Pad the queue past the kernel's single-argument ceiling (128 KiB) once it
+  # is parsed into JSON, the size a long-lived home's backlog reaches.
+  for i in $(seq 1 400); do
+    printf -- '- [ ] pad-%s - Padding row %s with enough prose to grow the parsed backlog quickly and realistically (repo: sample) (kind: ship)\n' \
+      "$i" "$i" >> "$home/data/backlog.md"
+  done
+  with_home "$home" "$ROOT/bin/fm-fleet-snapshot.sh" --contribution-input > "$home/input.json" 2> "$home/input.err" \
+    || fail "could not collect contribution input from a large backlog: $(cat "$home/input.err")"
+  [ "$(wc -c < "$home/input.json")" -gt 131072 ] || fail "large-backlog fixture did not exceed the single-argument ceiling: $(wc -c < "$home/input.json") bytes, $(cat "$home/input.err")"
+  jq -e '.backlog.present == true and (.tasks | type) == "array"' "$home/input.json" >/dev/null \
+    || fail "large-backlog contribution input was not the canonical pair: $(cat "$home/input.err")"
+  out=$(with_home "$home" "$ROOT/bin/fm-contributions.sh" snapshot "$home/input.json" --all) \
+    || fail 'could not project a large-backlog contribution input'
+  printf '%s' "$out" | jq -e '.checked == 1' >/dev/null \
+    || fail 'a large backlog hid its linked contribution'
+  pass 'a backlog larger than one argument still yields contribution input'
+}
+
 failures=0
-for test_name in test_actor_coverage test_stale_verdict test_unchecked_is_not_silence test_newest_check_has_no_verdict test_comment_wake test_review_wake test_inline_wake test_ready_issue_wake test_fresh_issue_requires_maintainer test_missing_lane_remains_missing test_partial_freshness_keeps_measured_rows test_malformed_record_cannot_prove_silence test_issue_timeline_and_exact_ack test_verdict_retains_judged_head test_observed_replacement_refreshes_verdict test_unobserved_head_leaves_verdict_unknown test_away_yolo_is_fleet_work test_away_yolo_cross_home_is_fleet_work test_retired_and_unsupported_coverage test_unsupported_forge_is_not_fleet_work test_held_unsupported_forge_is_not_captain_work test_shared_contribution_signal_wakes_once test_watcher_keeps_diagnostics_separate_from_contribution_wakes test_expired_child_unsupported_forge_stays_unmeasured test_watcher_surfaces_new_contribution_once test_home_summary_coverage test_unreadable_pending_is_not_empty test_budget_refusal_between_calls test_budget_bounded_call_timeout test_genuine_failure_near_deadline_is_unavailable test_shared_url_observed_once test_terminal_contribution_settles test_late_owner_inherits_terminal_observation test_done_task_open_pr_still_observed test_failure_wakes_once_per_episode test_late_owner_keeps_failure_episode_suppressed; do
+for test_name in test_actor_coverage test_stale_verdict test_unchecked_is_not_silence test_newest_check_has_no_verdict test_comment_wake test_review_wake test_inline_wake test_ready_issue_wake test_fresh_issue_requires_maintainer test_missing_lane_remains_missing test_partial_freshness_keeps_measured_rows test_malformed_record_cannot_prove_silence test_issue_timeline_and_exact_ack test_verdict_retains_judged_head test_observed_replacement_refreshes_verdict test_unobserved_head_leaves_verdict_unknown test_away_yolo_is_fleet_work test_away_yolo_cross_home_is_fleet_work test_retired_and_unsupported_coverage test_unsupported_forge_is_not_fleet_work test_held_unsupported_forge_is_not_captain_work test_shared_contribution_signal_wakes_once test_watcher_keeps_diagnostics_separate_from_contribution_wakes test_expired_child_unsupported_forge_stays_unmeasured test_watcher_surfaces_new_contribution_once test_home_summary_coverage test_unreadable_pending_is_not_empty test_budget_refusal_between_calls test_budget_bounded_call_timeout test_genuine_failure_near_deadline_is_unavailable test_shared_url_observed_once test_terminal_contribution_settles test_late_owner_inherits_terminal_observation test_done_task_open_pr_still_observed test_failure_wakes_once_per_episode test_late_owner_keeps_failure_episode_suppressed test_large_backlog_contribution_input; do
   ( "$test_name" ) || failures=$((failures + 1))
 done
 [ "$failures" -eq 0 ] || fail "$failures contribution regressions"
