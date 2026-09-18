@@ -813,6 +813,145 @@ test_secondmate_spawn_fails_closed_when_home_trust_cannot_be_recorded() {
   pass "fm-spawn.sh: a claude secondmate spawn refuses when home trust cannot be recorded"
 }
 
+# The headline fallback case: a store that is itself a mount point cannot be
+# renamed over (Linux answers EBUSY, exactly what a single-file bind mount of
+# ~/.claude.json produces on accurasee-ac), yet it stays perfectly writable in
+# place. The bind mount is made inside a private user+mount namespace
+# (`unshare -Urm`, which maps this uid to 0 inside, so the script's -O
+# ownership checks still pass), so the whole unprivileged setup stays in the
+# ordinary test process and only the mount and the registration run in the
+# namespace. Once the namespace exits the mount is gone, so a trust entry
+# present in the BACKING file can only have arrived by a write into that
+# inode - and an unchanged inode number proves nothing was replaced around it.
+test_bind_mounted_store_falls_back_to_an_in_place_write() {
+  local case_dir config home backing store fakehome inner inode_before out
+  case_dir="$TMP_ROOT/mount-fallback"
+  config="$case_dir/claude-config"
+  home="$case_dir/fm-homes/mount-n1"
+  fakehome="$case_dir/fakehome"
+  backing="$case_dir/backing.json"
+  store="$config/.claude.json"
+  inner="$case_dir/mount-and-trust.sh"
+  mkdir -p "$config" "$fakehome"
+  seed_secondmate_home "$home" mount-n1 clone
+  printf '%s\n' '{"numStartups": 7, "oauthAccount": {"emailAddress": "keep@example.test"}, "projects": {}}' > "$backing"
+  : > "$store"
+  cat > "$inner" <<'INNER'
+#!/usr/bin/env bash
+# Runs only inside `unshare -Urm`: bind the backing store over the empty mount
+# point, register trust, and report the registration's own exit code on stdout
+# so the parent can distinguish a mount failure (exit 9) from a refused write.
+set -u
+backing=$1 store=$2 config=$3 fakehome=$4 home=$5 trust=$6
+mount --bind "$backing" "$store" || exit 9
+CLAUDE_CONFIG_DIR="$config" HOME="$fakehome" "$trust" --secondmate-home "$home" mount-n1
+INNER
+  chmod +x "$inner"
+  if ! unshare -Urm true 2>/dev/null; then
+    pass "fm-claude-trust.sh: falls back to an in-place write for a bind-mounted store (skipped: no unshare capability on this host)"
+    return 0
+  fi
+  inode_before=$(stat -c %i "$backing")
+  unshare -Urm "$inner" "$backing" "$store" "$config" "$fakehome" "$home" "$TRUST" > "$case_dir/mount.out" 2>&1
+  local code=$?
+  out=$(cat "$case_dir/mount.out")
+  if [ "$code" -eq 9 ]; then
+    pass "fm-claude-trust.sh: falls back to an in-place write for a bind-mounted store (skipped: no bind-mount capability on this host)"
+    return 0
+  fi
+  expect_code 0 "$code" "the in-place fallback must record trust against a bind-mounted store: $out"
+  assert_contains "$out" "trusted: $home" "the registration did not report what it trusted"
+  assert_trusted "$backing" "$home" "the trust entry did not land in the mount's backing inode"
+  [ "$(stat -c %i "$backing")" = "$inode_before" ] \
+    || fail "the backing inode was replaced instead of written in place"
+  assert_store_value "$backing" '"keep@example.test"' \
+    "an unrelated key in the bind-mounted store was lost" oauthAccount emailAddress
+  [ ! -s "$store" ] || fail "the write reached around the mount into the mount point's own file"
+  pass "fm-claude-trust.sh: falls back to an in-place write for a bind-mounted store"
+}
+
+# The fallback must be narrow: only a rename failure that means the destination
+# inode cannot be replaced (EXDEV, EBUSY) may reach the in-place write.
+# NODE_OPTIONS --require reaches the script's node writer and makes
+# fs.renameSync throw a chosen code against a plain writable store, so the ONLY
+# thing separating the two halves is the error code: EACCES must refuse loudly
+# even though the in-place write would have succeeded, while EBUSY must land
+# the trust in the same inode.
+test_only_a_replace_blocked_rename_failure_falls_back() {
+  local rec store patch before inode_before out
+  rec=$(make_case rename-code)
+  read_case "$rec"
+  store="$CONFIG/.claude.json"
+  patch="$CASE_DIR/rename-fail.js"
+  printf '%s\n' '{"numStartups": 4, "projects": {}}' > "$store"
+  cat > "$patch" <<'JS'
+const fs = require("node:fs");
+const real = fs.renameSync;
+const code = process.env.FM_FAKE_RENAME_CODE;
+fs.renameSync = (a, b) => {
+  if (code && String(b).endsWith(".claude.json")) {
+    const e = new Error(`${code}: injected, rename '${a}' -> '${b}'`);
+    e.code = code;
+    throw e;
+  }
+  return real(a, b);
+};
+JS
+
+  before=$(cat "$store")
+  out=$(FM_FAKE_RENAME_CODE=EACCES NODE_OPTIONS="--require $patch" \
+    run_trust "$CONFIG" "$WT" "$PROJ")
+  expect_code 1 $? "a rename failure that is not replace-blocked must still refuse: $out"
+  assert_contains "$out" "refusing to pre-register Claude trust" \
+    "the refusal did not carry the existing message"
+  assert_not_trusted "$store" "$WT" "a non-replace-blocked rename failure still wrote the store"
+  [ "$(cat "$store")" = "$before" ] \
+    || fail "the store was modified by a rename failure that is not replace-blocked"
+  [ -z "$(find "$CONFIG" -maxdepth 1 -name '.claude.json.fm-trust.*' -print -quit)" ] \
+    || fail "a temporary store file was left behind after the refused registration"
+
+  inode_before=$(stat -c %i "$store")
+  out=$(FM_FAKE_RENAME_CODE=EBUSY NODE_OPTIONS="--require $patch" \
+    run_trust "$CONFIG" "$WT" "$PROJ")
+  expect_code 0 $? "a replace-blocked rename failure must fall back to the in-place write: $out"
+  assert_trusted "$store" "$WT" "the trust entry did not land through the in-place fallback"
+  [ "$(stat -c %i "$store")" = "$inode_before" ] \
+    || fail "the store inode was replaced on a path that must write in place"
+  assert_store_value "$store" 4 "an unrelated key in the store was lost" numStartups
+  [ -z "$(find "$CONFIG" -maxdepth 1 -name '.claude.json.fm-trust.*' -print -quit)" ] \
+    || fail "a temporary store file was left behind after the fallback registration"
+  pass "fm-claude-trust.sh: only a replace-blocked rename failure falls back to the in-place write"
+}
+
+# A write failure that is not about the replace at all must still refuse, even
+# when the store itself is writable in place: a read-only config directory
+# fails the temp file's exclusive create before rename is ever reached, and no
+# fallback may rescue that.
+test_an_unwritable_config_directory_still_refuses() {
+  local rec store before out code
+  rec=$(make_case readonly-config)
+  read_case "$rec"
+  store="$CONFIG/.claude.json"
+  # Root bypasses directory permission bits and would make the case vacuous.
+  if [ "$(id -u)" = 0 ]; then
+    pass "fm-claude-trust.sh: an unwritable config directory still refuses (skipped as root)"
+    return 0
+  fi
+  printf '%s\n' '{"projects": {}}' > "$store"
+  before=$(cat "$store")
+  chmod 555 "$CONFIG"
+  out=$(run_trust "$CONFIG" "$WT" "$PROJ")
+  code=$?
+  chmod 755 "$CONFIG"
+  expect_code 1 "$code" "a config directory that cannot be written must refuse: $out"
+  assert_contains "$out" "refusing to pre-register Claude trust" \
+    "the refusal did not carry the existing message"
+  assert_not_trusted "$store" "$WT" "a worktree was trusted into a directory that could not be written"
+  [ "$(cat "$store")" = "$before" ] \
+    || fail "the store was modified although its directory could not be written"
+  pass "fm-claude-trust.sh: an unwritable config directory still refuses"
+}
+
 test_fresh_worktree_is_trusted
 test_fresh_worktree_also_trusts_the_project_root_without_import_consent
 test_registration_carries_forward_existing_import_consent
@@ -844,3 +983,6 @@ test_secondmate_leased_worktree_home_is_trusted
 test_secondmate_home_trust_refuses_everything_unseeded
 test_worktree_mode_still_refuses_a_secondmate_home
 test_secondmate_spawn_fails_closed_when_home_trust_cannot_be_recorded
+test_bind_mounted_store_falls_back_to_an_in_place_write
+test_only_a_replace_blocked_rename_failure_falls_back
+test_an_unwritable_config_directory_still_refuses

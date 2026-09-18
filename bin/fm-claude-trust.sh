@@ -148,12 +148,16 @@
 # projects entries for the worktree path and the resolved canonical project
 # path in ${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json, which must be a regular
 # file this uid owns; every unrelated key and project entry is preserved, and
-# both entries land in one atomic replacement. In secondmate-home mode: the
-# single projects entry for the registered home path, same store, same atomic
-# replacement. fm-spawn.sh forwards CLAUDE_CONFIG_DIR onto the claude launch
-# verbatim rather than resolving it, and the pane starts in the registered
-# directory, so only an absolute value names the same store on both sides; a
-# relative one is refused below rather than guessed at.
+# both entries land in one replacement that is atomic while the store can be
+# renamed over - a store that cannot be replaced (a mount point, an inode on a
+# different filesystem) falls back to an in-place write of the same bytes,
+# which keeps all-or-nothing intent but is not atomic against a concurrent
+# reader or a crash. In secondmate-home mode: the single projects entry for
+# the registered home path, same store, same replacement rule. fm-spawn.sh
+# forwards CLAUDE_CONFIG_DIR onto the claude launch verbatim rather than
+# resolving it, and the pane starts in the registered directory, so only an
+# absolute value names the same store on both sides; a relative one is
+# refused below rather than guessed at.
 set -u
 # Path resolution here must answer from the filesystem, never from the caller's
 # environment, because the refusals below are the safety property. CDPATH would
@@ -368,17 +372,20 @@ fi
 # firstmate Claude Code session that writes this same file, so the store can move
 # under us in both directions and each needs its own answer.
 #
-# Losing the VENDOR's write is the serious one: this renames a whole
-# re-serialisation over the file, so anything Claude changed since the read -
+# Losing the VENDOR's write is the serious one: this replaces the file with a
+# whole re-serialisation, so anything Claude changed since the read -
 # oauthAccount, user-scope mcpServers, another project's history - would be gone,
 # in a format this does not own. So the bytes read are fingerprinted and
-# re-checked immediately before the rename, and a store that moved is not
+# re-checked immediately before the replace, and a store that moved is not
 # overwritten: the whole read-modify-write is retried once, and a second move
 # refuses rather than clobbering.
 #
-# That narrows the window; it does not close it. Rename cannot be conditioned on
-# content, so a write landing between the final check and the rename is still
-# lost, and this claims no more than that.
+# That narrows the window; it does not close it. Neither the rename nor the
+# in-place fallback for a store that cannot be replaced can be conditioned on
+# content, so a write landing between the final check and the replace is still
+# lost, and this claims no more than that. The fallback is weaker still: it
+# mutates the live store, so a reader mid-write or a crash inside it can
+# observe or leave a partial state the rename path never produces.
 #
 # Losing OUR entry is the mild one: a vendor rewrite that drops it only resurrects
 # the dialog this registration removes, which reaches firstmate as an ordinary
@@ -388,9 +395,11 @@ fi
 # cannot stop a vendor session's own rewrite anyway.
 #
 # In worktree mode every flag lands on both the worktree entry and the project
-# entry in the same read-modify-write attempt, so a single rename either
+# entry in the same read-modify-write attempt, so one replacement either
 # records all of it or none of it - there is no state where the worktree entry
-# is fresh and the project entry stale, or the other way round. In
+# is fresh and the project entry stale, or the other way round. On the rename
+# path that replace is atomic; on the in-place fallback a crash mid-write can
+# leave a torn store, but never a half-recorded entry set. In
 # secondmate-home mode only the single home entry is written.
 #
 # The two external-imports flags (worktree mode only) are gated separately
@@ -463,6 +472,43 @@ const declinedExternalImports = (projects, key) =>
 // value, is NOT consent (see the block comment above this script's node call).
 const approvedExternalImports = (projects, key) =>
   projects?.[key]?.hasClaudeMdExternalIncludesApproved === true;
+// rename() cannot replace every store. When the store is itself a MOUNT POINT
+// - a single file bind-mounted in, which is how ~/.claude.json reaches a
+// container from its host - Linux fails the replace with EBUSY, and a store
+// whose inode lives on a different filesystem from its own directory fails
+// EXDEV. Both say the same thing: the destination inode cannot be swapped
+// out, even though it is perfectly writable. Only those two codes fall back.
+// Every other failure - EACCES, EPERM, EROFS, ENOSPC, ENOENT - still refuses
+// loudly, because they mean the write itself is wrong rather than the replace
+// being impossible.
+const REPLACE_BLOCKED = new Set(["EXDEV", "EBUSY"]);
+// The fallback for a store that cannot be replaced: the SAME bytes the temp
+// file holds, written into the existing inode, so a bind mount, a hard link
+// and a dotfile manager's target all survive the write.
+//
+// THIS IS WEAKER THAN THE RENAME PATH AND UNAVOIDABLY SO. A rename swaps a
+// complete file in one step; this mutates the live store, so a concurrent
+// reader can observe a partial state and a crash mid-write can leave one. The
+// window is narrowed as far as a write can narrow it: "r+" so the store is
+// opened rather than created or truncated, one pass over the whole payload
+// from offset 0 before any old byte is dropped, ftruncate only afterwards so
+// the file is never momentarily empty, and fsync before the fd closes.
+const writeInPlace = (bytes) => {
+  // "r+" never creates and never truncates on open, so a store that vanished
+  // between the checks above and here fails ENOENT instead of being conjured
+  // up by the fallback, and the existing inode's mode and ownership are left
+  // exactly as they are rather than reset to a fresh file's 0600.
+  const fd = fs.openSync(store, "r+");
+  try {
+    if (!fs.fstatSync(fd).isFile()) throw new Error(`${store} is not a regular file`);
+    let off = 0;
+    while (off < bytes.length) off += fs.writeSync(fd, bytes, off, bytes.length - off, off);
+    fs.ftruncateSync(fd, bytes.length);
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+};
 const attempt = () => {
   const original = readStore();
   const before = fingerprint(original);
@@ -509,14 +555,27 @@ const attempt = () => {
   // 9646 lines. Compact would reformat the operator's whole config on every
   // spawn and the vendor's next write would expand it again, so this must not
   // be "simplified" to JSON.stringify(root) without re-measuring the vendor.
-  fs.writeFileSync(tmp, `${JSON.stringify(root, null, 2)}\n`, { mode: 0o600, flag: "wx" });
-  let renamed = false;
+  const payload = `${JSON.stringify(root, null, 2)}\n`;
+  fs.writeFileSync(tmp, payload, { mode: 0o600, flag: "wx" });
   try {
     if (fingerprint(readStore()) !== before) return "moved";
-    fs.renameSync(tmp, store);
-    renamed = true;
+    try {
+      fs.renameSync(tmp, store);
+    } catch (err) {
+      if (!REPLACE_BLOCKED.has(err.code)) throw err;
+      try {
+        writeInPlace(Buffer.from(payload, "utf8"));
+      } catch (fallbackErr) {
+        throw new Error(
+          `${store} could not be replaced (${err.code}) and could not be written in place: ${fallbackErr.message}`,
+        );
+      }
+    }
   } finally {
-    if (!renamed) fs.rmSync(tmp, { force: true });
+    // A successful rename consumes the temp file; the fallback does not, and a
+    // failure on either path leaves it behind. force makes the already-renamed
+    // case a no-op rather than a second error.
+    fs.rmSync(tmp, { force: true });
   }
   const back = JSON.parse(fs.readFileSync(store, "utf8"));
   const landed = keys.every(([key, flags]) => flagsLanded(back.projects, key, flags));
