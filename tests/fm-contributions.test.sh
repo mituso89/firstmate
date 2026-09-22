@@ -151,13 +151,19 @@ case "$*" in
           comments:{nodes:[$comments[0][] | {databaseId:.id,url:.html_url,
             createdAt:(.created_at // .updated_at),updatedAt:.updated_at,
             authorAssociation:.author_association,body:.body,author:{login:.user.login}}]},
-          reviews:{nodes:[$reviews[0][] | {databaseId:.id,url:.html_url,submittedAt:.submitted_at,
+          reviews:{nodes:([$reviews[0][] | {databaseId:.id,url:.html_url,submittedAt:.submitted_at,
             state:.state,authorAssociation:.author_association,body:.body,
-            commit:{oid:.commit_id},author:{login:.user.login}}]},
-          reviewThreads:{nodes:[{comments:{nodes:[$inline[0][] | {databaseId:.id,url:.html_url,
-            createdAt:(.created_at // .updated_at),updatedAt:.updated_at,
-            authorAssociation:.author_association,body:.body,
-            commit:{oid:.commit_id},author:{login:.user.login}}]}}]},
+            commit:{oid:.commit_id},author:{login:.user.login},comments:{nodes:[]}}]
+            | if ($inline[0] | length) == 0 then .
+              elif (length) == 0 then [{state:"COMMENTED",
+                comments:{nodes:[$inline[0][] | {databaseId:.id,url:.html_url,
+                  createdAt:(.created_at // .updated_at),updatedAt:.updated_at,
+                  authorAssociation:.author_association,body:.body,
+                  commit:{oid:.commit_id},author:{login:.user.login}}]}}]
+              else .[0].comments.nodes = [$inline[0][] | {databaseId:.id,url:.html_url,
+                createdAt:(.created_at // .updated_at),updatedAt:.updated_at,
+                authorAssociation:.author_association,body:.body,
+                commit:{oid:.commit_id},author:{login:.user.login}}] end)},
           commits:{nodes:[{commit:{oid:$rollup,statusCheckRollup:{contexts:{nodes:$contexts[0]}}}}]}}}}}' ;;
   'api graphql '*)
     jq -n --slurpfile labels "$FORGE/labels.json" --slurpfile comments "$FORGE/comments.json" \
@@ -169,7 +175,7 @@ case "$*" in
           createdAt:(.created_at // .updated_at),updatedAt:.updated_at,
           authorAssociation:.author_association,body:.body,author:{login:.user.login}}]},
         timelineItems:{nodes:[$events[0][] | select(.event == "labeled")
-          | {id:(.id | tostring),createdAt:(.created_at // "2026-09-16T08:00:00Z"),label:{name:.label.name}}]}}}}}' ;;
+          | {id:("LE_kwDOAbCdEf" + (.id | tostring)),createdAt:(.created_at // "2026-09-16T08:00:00Z"),label:{name:.label.name}}]}}}}}' ;;
   *) printf 'unexpected gh fixture call: %s\n' "$*" >&2; exit 1 ;;
 esac
 SH
@@ -665,7 +671,8 @@ test_call_bound_admits_slow_forge_read() {
     || fail 'a slow forge read inside the per-call bound recorded no observation'
   out=$(with_home "$home" env FM_CONTRIBUTIONS_CALL_BOUND=5 "$ROOT/bin/fm-contributions.sh" poll) \
     || fail 'the same slow read past a tighter per-call bound failed'
-  [ -z "$out" ] || fail "a local per-call timeout printed: $out"
+  [ "$out" = 'contributions: observation unavailable for https://github.com/o/r/pull/8' ] \
+    || fail "a local per-call timeout did not print its unavailable line: $out"
   jq -e '.records[0].error == "local per-call observation timeout after 5s"
     and .records[0].timeout == true' "$home/data/delivery/contributions.json" >/dev/null \
     || fail 'the per-call bound did not decide the slow read outcome'
@@ -681,15 +688,15 @@ test_local_timeout_is_not_a_forge_failure() {
   printf '3\n' > "$home/forge/delay"
   out=$(with_home "$home" env FM_CONTRIBUTIONS_CALL_BOUND=1 "$ROOT/bin/fm-contributions.sh" poll) \
     || fail 'a locally timed-out read failed the poll'
-  [ -z "$out" ] || fail "a local per-call timeout printed an unavailable line: $out"
-  [ ! -s "$home/state/.wake-queue" ] || fail 'a local per-call timeout enqueued a wake'
+  [ "$out" = 'contributions: observation unavailable for https://github.com/o/r/pull/8' ] \
+    || fail "a local per-call timeout did not print its unavailable line: $out"
   jq -e '.records[0].error == "local per-call observation timeout after 1s"
     and .records[0].timeout == true' "$home/data/delivery/contributions.json" >/dev/null \
     || fail 'a local per-call timeout did not record its distinct error'
-  pass 'a local per-call timeout is silent, marked, and never a forge failure'
+  pass 'a local per-call timeout reports and wakes while naming the local bound'
 }
 
-test_timeout_does_not_mask_a_forge_failure() {
+test_timeout_starts_an_episode_like_any_failure() {
   local home out
   home=$(new_home timeout-then-failure)
   forge_home "$home"
@@ -698,15 +705,17 @@ test_timeout_does_not_mask_a_forge_failure() {
   printf '3\n' > "$home/forge/delay"
   out=$(with_home "$home" env FM_CONTRIBUTIONS_CALL_BOUND=1 "$ROOT/bin/fm-contributions.sh" poll) \
     || fail 'the timed-out poll failed'
-  [ -z "$out" ] || fail "the timed-out poll printed: $out"
+  [ "$out" = 'contributions: observation unavailable for https://github.com/o/r/pull/8' ] \
+    || fail "a local per-call timeout did not start the episode: $out"
+  jq -e '.records[0].timeout == true' "$home/data/delivery/contributions.json" >/dev/null \
+    || fail 'a local per-call timeout did not keep its mark'
   printf 'fail\n' > "$home/forge/fault"
   out=$(with_home "$home" "$ROOT/bin/fm-contributions.sh" poll) || fail 'the failing poll failed'
-  [ "$out" = 'contributions: observation unavailable for https://github.com/o/r/pull/8' ] \
-    || fail "a timeout-marked error masked a genuine forge failure: $out"
+  [ -z "$out" ] || fail "a genuine forge failure inside the same episode re-announced: $out"
   jq -e '.records[0].error == "forge observation unavailable or changed during read"
     and .records[0].timeout == false' "$home/data/delivery/contributions.json" >/dev/null \
     || fail 'a genuine failure after a timeout did not clear the timeout mark'
-  pass 'a local timeout never masks the next genuine forge failure'
+  pass 'a local timeout starts the episode and a later forge failure stays quiet'
 }
 
 test_invalid_call_bound_refused() {
@@ -745,6 +754,21 @@ test_observation_costs_one_forge_call() {
     "$home/data/delivery/contributions.json" >/dev/null \
     || fail 'a single-call observation recorded no observation'
   pass 'one observation costs exactly one forge call and fits a small budget'
+}
+
+test_full_connection_window_discloses_truncation() {
+  local home
+  home=$(new_home truncated-window)
+  forge_home "$home"
+  wrap_forge "$home"
+  jq -n '[range(1; 101) | {id:.,user:{login:"maintainer"},author_association:"MEMBER",
+    body:"note",html_url:"https://github.com/o/r/pull/8#issuecomment-1",
+    updated_at:"2026-09-16T08:01:00Z"}]' > "$home/forge/comments.json"
+  with_home "$home" "$ROOT/bin/fm-contributions.sh" poll >/dev/null || fail 'a full-window poll failed'
+  jq -e '.records[0].error == null and .records[0].observation.truncated == ["comments"]' \
+    "$home/data/delivery/contributions.json" >/dev/null \
+    || fail 'a full connection window was not disclosed on the record'
+  pass 'a full connection window records its truncation on the observation'
 }
 
 test_shared_url_observed_once() {
@@ -822,6 +846,24 @@ test_pending_review_not_observed() {
   printf '%s' "$out" | jq -e '.stale_verdicts == 0 and .rows[0].stale_verdicts == 0' >/dev/null \
     || fail "an unsubmitted PENDING review produced a stale verdict: $out"
   pass 'an unsubmitted PENDING review reaches neither reviews nor stale verdicts'
+}
+
+test_pending_review_inline_comment_not_observed() {
+  local home
+  home=$(new_home pending-review-inline)
+  forge_home "$home"
+  jq -n --arg head "$HEAD_B" '[{id:31,user:{login:"viewer"},author_association:"MEMBER",state:"PENDING",
+    body:"draft",html_url:"https://github.com/o/r/pull/8#pullrequestreview-31",submitted_at:null,commit_id:$head}]' \
+    > "$home/forge/reviews.json"
+  jq -n --arg head "$HEAD_B" '[{id:33,user:{login:"viewer"},author_association:"MEMBER",
+    body:"nit",html_url:"https://github.com/o/r/pull/8#discussion_r33",
+    updated_at:"2026-09-16T08:01:00Z",commit_id:$head}]' > "$home/forge/inline.json"
+  with_home "$home" "$ROOT/bin/fm-contributions.sh" poll >/dev/null \
+    || fail 'poll with a PENDING draft review failed'
+  jq -e '.records[0] | .error == null and .observation.reviews == [] and .observation.events == [] and .pending == []' \
+    "$home/data/delivery/contributions.json" >/dev/null \
+    || fail "an unsubmitted draft review's inline comment was observed: $(cat "$home/data/delivery/contributions.json")"
+  pass 'an unsubmitted PENDING draft review keeps its inline comments unobserved'
 }
 
 test_terminal_contribution_settles() {
@@ -991,7 +1033,7 @@ test_large_backlog_contribution_input() {
 }
 
 failures=0
-for test_name in test_actor_coverage test_stale_verdict test_unchecked_is_not_silence test_newest_check_has_no_verdict test_comment_wake test_review_wake test_inline_wake test_ready_issue_wake test_fresh_issue_requires_maintainer test_missing_lane_remains_missing test_partial_freshness_keeps_measured_rows test_malformed_record_cannot_prove_silence test_issue_timeline_and_exact_ack test_verdict_retains_judged_head test_observed_replacement_refreshes_verdict test_unobserved_head_leaves_verdict_unknown test_away_yolo_is_fleet_work test_away_yolo_cross_home_is_fleet_work test_retired_and_unsupported_coverage test_unsupported_forge_is_not_fleet_work test_held_unsupported_forge_is_not_captain_work test_shared_contribution_signal_wakes_once test_watcher_keeps_diagnostics_separate_from_contribution_wakes test_expired_child_unsupported_forge_stays_unmeasured test_watcher_surfaces_new_contribution_once test_home_summary_coverage test_unreadable_pending_is_not_empty test_budget_refusal_between_calls test_budget_bounded_call_timeout test_genuine_failure_near_deadline_is_unavailable test_call_bound_admits_slow_forge_read test_local_timeout_is_not_a_forge_failure test_timeout_does_not_mask_a_forge_failure test_invalid_call_bound_refused test_observation_costs_one_forge_call test_shared_url_observed_once test_numeric_repository_name_observed test_expected_status_is_running test_pending_review_not_observed test_terminal_contribution_settles test_late_owner_inherits_terminal_observation test_done_task_open_pr_still_observed test_failure_wakes_once_per_episode test_late_owner_keeps_failure_episode_suppressed test_large_backlog_contribution_input; do
+for test_name in test_actor_coverage test_stale_verdict test_unchecked_is_not_silence test_newest_check_has_no_verdict test_comment_wake test_review_wake test_inline_wake test_ready_issue_wake test_fresh_issue_requires_maintainer test_missing_lane_remains_missing test_partial_freshness_keeps_measured_rows test_malformed_record_cannot_prove_silence test_issue_timeline_and_exact_ack test_verdict_retains_judged_head test_observed_replacement_refreshes_verdict test_unobserved_head_leaves_verdict_unknown test_away_yolo_is_fleet_work test_away_yolo_cross_home_is_fleet_work test_retired_and_unsupported_coverage test_unsupported_forge_is_not_fleet_work test_held_unsupported_forge_is_not_captain_work test_shared_contribution_signal_wakes_once test_watcher_keeps_diagnostics_separate_from_contribution_wakes test_expired_child_unsupported_forge_stays_unmeasured test_watcher_surfaces_new_contribution_once test_home_summary_coverage test_unreadable_pending_is_not_empty test_budget_refusal_between_calls test_budget_bounded_call_timeout test_genuine_failure_near_deadline_is_unavailable test_call_bound_admits_slow_forge_read test_local_timeout_is_not_a_forge_failure test_timeout_starts_an_episode_like_any_failure test_invalid_call_bound_refused test_observation_costs_one_forge_call test_full_connection_window_discloses_truncation test_shared_url_observed_once test_numeric_repository_name_observed test_expected_status_is_running test_pending_review_not_observed test_pending_review_inline_comment_not_observed test_terminal_contribution_settles test_late_owner_inherits_terminal_observation test_done_task_open_pr_still_observed test_failure_wakes_once_per_episode test_late_owner_keeps_failure_episode_suppressed test_large_backlog_contribution_input; do
   ( "$test_name" ) || failures=$((failures + 1))
 done
 [ "$failures" -eq 0 ] || fail "$failures contribution regressions"

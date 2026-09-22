@@ -44,14 +44,12 @@
 # every owner. A final observation applies to every owner without another
 # forge read. When the budget runs out mid-observation, the poll ends with
 # that URL's records untouched; only a forge failure or a local timeout
-# records an error. A read killed at the per-call bound is a local timeout: it records a
-# distinct 'local per-call observation timeout after <N>s' error, marks the
-# record timeout:true, prints no unavailable line and raises no wake, because
-# it measures this host's latency rather than the contribution. A genuine
-# forge failure keeps its own error string and its once-per-episode
-# unavailable line, and the episode test ignores timeout-marked errors, so a
-# local timeout can never mask a real forge outage. API failure leaves error
-# evidence; an expired or absent observation is not silence.
+# records an error. A read killed at the per-call bound is a local timeout:
+# it is reported and woken like any other failure, while its recorded 'local
+# per-call observation timeout after <N>s' error and timeout:true mark still
+# name the local bound, so a local stall stays distinguishable from a
+# forge-side failure. API failure leaves error evidence; an expired or
+# absent observation is not silence.
 # FM_CONTRIBUTIONS_MAX_AGE (default 900 seconds)
 # bounds freshness. A URL whose last good observation is merged or closed is
 # final: it is never re-read, stays fresh, and a stale error beside it is
@@ -215,8 +213,8 @@ PR_QUERY='query($owner:String!,$name:String!,$number:Int!) {
       state merged isDraft mergeable headRefOid reviewDecision url
       author { login }
       comments(last:100) { nodes { databaseId url createdAt updatedAt authorAssociation body author { login } } }
-      reviews(last:100) { nodes { databaseId url submittedAt state authorAssociation body author { login } commit { oid } } }
-      reviewThreads(last:100) { nodes { comments(last:100) { nodes { databaseId url createdAt updatedAt authorAssociation body author { login } commit { oid } } } } }
+      reviews(last:100) { nodes { databaseId url submittedAt state authorAssociation body author { login } commit { oid }
+        comments(last:100) { nodes { databaseId url createdAt updatedAt authorAssociation body author { login } commit { oid } } } } }
       commits(last:1) { nodes { commit { oid statusCheckRollup { contexts(last:100) { nodes {
         __typename
         ... on CheckRun { name databaseId status conclusion startedAt }
@@ -251,7 +249,7 @@ observe() { # canonical GitHub URL -> normalized JSON
       | if ($pr.commits.nodes[0].commit.oid // null) != $pr.headRefOid then error("head moved during read") else . end
       | ($pr.comments.nodes | map(. + {_signal:"comment"})) as $c
       | ($pr.reviews.nodes | map(select(.state != "PENDING") | . + {_signal:"review"})) as $r
-      | ([$pr.reviewThreads.nodes[].comments.nodes[]] | map(. + {_signal:"review-comment"})) as $i
+      | ([$pr.reviews.nodes[] | select(.state != "PENDING") | .comments.nodes[]] | map(. + {_signal:"review-comment"})) as $i
       | {head:$pr.headRefOid,
         state:(if $pr.merged then "merged" else ($pr.state | ascii_downcase) end),
         draft:$pr.isDraft,
@@ -270,6 +268,10 @@ observe() { # canonical GitHub URL -> normalized JSON
             {name:.context,id:.id,started_at:.createdAt,
              status:(if .state | IN("PENDING","EXPECTED") then "in_progress" else "completed" end),
              conclusion:(if .state | IN("PENDING","EXPECTED") then null else (.state | ascii_downcase) end)} end)),
+        truncated:([(if ($pr.comments.nodes | length) == 100 then "comments" else empty end),
+          (if ($pr.reviews.nodes | length) == 100 then "reviews" else empty end),
+          (if (($pr.commits.nodes[0].commit.statusCheckRollup.contexts.nodes // []) | length) == 100
+            then "contexts" else empty end)]),
         events:(($c + $r + $i)
           | map(select((.author.login // "") != $pr.author.login and (.authorAssociation | IN("OWNER","MEMBER","COLLABORATOR")))
             | {token:(._signal + ":" + (.databaseId | tostring) + ":"
@@ -285,12 +287,14 @@ observe() { # canonical GitHub URL -> normalized JSON
       ($g[0].data.repository.issue) as $i | {state:($i.state | ascii_downcase),head:null,
         ready:any($i.labels.nodes[]; (.name | ascii_downcase) == ($label | ascii_downcase)),
         checks:[],reviews:[],
+        truncated:([(if ($i.comments.nodes | length) == 100 then "comments" else empty end),
+          (if ($i.timelineItems.nodes | length) == 100 then "timelineItems" else empty end)]),
         events:(($i.comments.nodes
           | map(select((.author.login // "") != $i.author.login and (.authorAssociation | IN("OWNER","MEMBER","COLLABORATOR")))
             | {token:("comment:" + (.databaseId | tostring) + ":" + (.updatedAt // "")),type:"comment",source:.url,
                head:null,author:(.author.login // ""),body:(.body // "" | .[:500])}))
           + [$i.timelineItems.nodes[] | select((.label.name | ascii_downcase) == ($label | ascii_downcase))
-             | {token:("ready-for-pr:" + (.id | tostring)),type:"ready-for-pr",source:$i.url,head:null,body:"filed issue reached ready-for-pr"}])}' > "$TMP/observation.json" || return 1
+             | {token:("ready-for-pr:" + .label.name + ":" + (.createdAt // "")),type:"ready-for-pr",source:$i.url,head:null,body:"filed issue reached ready-for-pr"}])}' > "$TMP/observation.json" || return 1
   fi
   jq_lib -ne --arg url "$url" --arg kind "$kind" --slurpfile observed "$TMP/observation.json" '
     {schema:"fm-contributions.v1",task:"observation",records:[{url:$url,
@@ -375,12 +379,10 @@ poll() {
     # An observation the budget cut short is unmeasured, not unavailable: keep
     # every owner's prior record so the URL is observed first next poll.
     [ "$BUDGET_EXHAUSTED" -eq 0 ] || break
-    # Wake once per failure episode: only when no owner has a prior error. A
-    # local timeout never announces, and its mark never suppresses a later
-    # genuine failure's wake.
-    if [ "$observed" -ne 0 ] && [ "$CALL_TIMED_OUT" -eq 0 ] && jq -ne --slurpfile saved "$TMP/saved.json" --arg url "$url" --args \
+    # Wake once per failure episode: only when no owner has a prior error.
+    if [ "$observed" -ne 0 ] && jq -ne --slurpfile saved "$TMP/saved.json" --arg url "$url" --args \
       'all($ARGS.positional[] as $task | [$saved[0][] | select(.task == $task) | .records[] | select(.url == $url)] | first;
-        .error == null or .timeout == true)' "${row[@]:1}" >/dev/null; then
+        .error == null)' "${row[@]:1}" >/dev/null; then
       printf 'contributions: observation unavailable for %s\n' "$url"
     fi
     case "$url" in */issues/*) kind=issue ;; *) kind="pr" ;; esac
