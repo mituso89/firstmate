@@ -115,13 +115,31 @@ forge_home() {
   printf '[]\n' > "$home/forge/inline.json"
   printf '[]\n' > "$home/forge/labels.json"
   printf '[]\n' > "$home/forge/events.json"
+  printf '[{"__typename":"CheckRun","name":"test","databaseId":1,"status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-09-16T08:00:00Z"}]\n' \
+    > "$home/forge/contexts.json"
   cat > "$home/fakebin/gh" <<'SH'
 #!/usr/bin/env bash
 set -eu
+# Like gh, -F sends a digit-only value as a number, which a String! rejects.
+if [ "${1:-} ${2:-}" = 'api graphql' ]; then
+  prev=
+  for arg in "$@"; do
+    if [ "$prev" = -F ]; then
+      case "$arg" in owner=*|name=*)
+        case "${arg#*=}" in ''|*[!0-9]*) ;; *)
+          printf 'GraphQL: Variable $%s of type String! was provided invalid value\n' "${arg%%=*}" >&2; exit 1 ;;
+        esac ;;
+      esac
+    fi
+    prev=$arg
+  done
+fi
 case "$*" in
   'pr view '*headRefOid*) cat "$FORGE/head" ;;
   'api graphql '*pullRequest*)
     jq -n --arg head "$(cat "$FORGE/head")" --arg state "$(cat "$FORGE/state" 2>/dev/null || printf open)" \
+      --arg rollup "$(cat "$FORGE/rollup_head" 2>/dev/null || cat "$FORGE/head")" \
+      --slurpfile contexts "$FORGE/contexts.json" \
       --slurpfile comments "$FORGE/comments.json" --slurpfile reviews "$FORGE/reviews.json" --slurpfile inline "$FORGE/inline.json" '
       {data:{repository:{viewerPermission:"READ",
         pullRequest:{
@@ -140,9 +158,7 @@ case "$*" in
             createdAt:(.created_at // .updated_at),updatedAt:.updated_at,
             authorAssociation:.author_association,body:.body,
             commit:{oid:.commit_id},author:{login:.user.login}}]}}]},
-          commits:{nodes:[{commit:{statusCheckRollup:{contexts:{nodes:[
-            {__typename:"CheckRun",name:"test",databaseId:1,status:"COMPLETED",
-             conclusion:"SUCCESS",startedAt:"2026-09-16T08:00:00Z"}]}}}}]}}}}}' ;;
+          commits:{nodes:[{commit:{oid:$rollup,statusCheckRollup:{contexts:{nodes:$contexts[0]}}}}]}}}}}' ;;
   'api graphql '*)
     jq -n --slurpfile labels "$FORGE/labels.json" --slurpfile comments "$FORGE/comments.json" \
       --slurpfile events "$FORGE/events.json" '
@@ -582,6 +598,7 @@ case "$fault:$*" in
   down:*) printf 'HTTP 502\n' >&2; exit 1 ;;
   hang:'api graphql '*) sleep 4 ;;
   slow:'api graphql '*) sleep "$(cat "$FORGE/delay" 2>/dev/null || echo 1)" ;;
+  head:'api graphql '*) printf '%s\n' "$(printf 'b%.0s' $(seq 40))" > "$FORGE/rollup_head" ;;
 esac
 exec "$(dirname "$0")/gh-fixture" "$@"
 SH
@@ -732,7 +749,7 @@ test_observation_costs_one_forge_call() {
 
 test_shared_url_observed_once() {
   local mode home out calls expected
-  for mode in ok fail; do
+  for mode in ok fail head; do
     home=$(new_home "shared-once-$mode")
     forge_home "$home"
     wrap_forge "$home"
@@ -755,6 +772,56 @@ test_shared_url_observed_once() {
     done
   done
   pass 'a URL owned by two tasks costs one forge call and every owner receives the result'
+}
+
+test_numeric_repository_name_observed() {
+  local home out
+  home=$(new_home numeric-name)
+  forge_home "$home"
+  printf -- '- [ ] numeric - Filed https://github.com/o/2048/pull/12 (repo: sample) (kind: ship)\n' >> "$home/data/backlog.md"
+  out=$(with_home "$home" "$ROOT/bin/fm-contributions.sh" poll) || fail 'a digit-only repository poll failed'
+  [ -z "$out" ] || fail "a digit-only repository name printed: $out"
+  jq -e --arg head "$HEAD_A" '.records[0] | .url == "https://github.com/o/2048/pull/12"
+    and .error == null and .observation.head == $head' "$home/data/numeric/contributions.json" >/dev/null \
+    || fail "a digit-only repository name was not observed: $(cat "$home/data/numeric/contributions.json")"
+  pass 'a digit-only repository name is sent as a string and observed'
+}
+
+project_delivery() { # home -> snapshot --all JSON
+  with_home "$1" "$ROOT/bin/fm-fleet-snapshot.sh" --contribution-input > "$1/input.json" \
+    || fail 'could not collect contribution input'
+  with_home "$1" "$ROOT/bin/fm-contributions.sh" snapshot "$1/input.json" --all || fail 'could not project the observation'
+}
+
+test_expected_status_is_running() {
+  local home out
+  home=$(new_home expected-status)
+  forge_home "$home"
+  jq '. + [{__typename:"StatusContext",id:"SC_1",context:"legacy-ci",state:"EXPECTED",createdAt:null}]' \
+    "$home/forge/contexts.json" > "$home/forge/contexts.next" && mv "$home/forge/contexts.next" "$home/forge/contexts.json"
+  with_home "$home" "$ROOT/bin/fm-contributions.sh" poll >/dev/null || fail 'poll with an EXPECTED status failed'
+  out=$(project_delivery "$home")
+  printf '%s' "$out" | jq -e '.rows[0] | .checked and .failed_checks == 0 and .pending_checks == 1
+    and .reason == "checks still running"' >/dev/null \
+    || fail "an EXPECTED status was reported as a failed check: $out"
+  pass 'an EXPECTED status that has not reported counts as running, never failed'
+}
+
+test_pending_review_not_observed() {
+  local home out
+  home=$(new_home pending-review)
+  forge_home "$home"
+  jq -n --arg head "$HEAD_B" '[{id:31,user:{login:"viewer"},author_association:"MEMBER",state:"PENDING",
+    body:"draft",html_url:"https://github.com/o/r/pull/8#pullrequestreview-31",submitted_at:null,commit_id:$head}]' \
+    > "$home/forge/reviews.json"
+  with_home "$home" "$ROOT/bin/fm-contributions.sh" poll >/dev/null || fail 'poll with a PENDING review failed'
+  jq -e '.records[0] | .error == null and .observation.reviews == [] and .observation.events == [] and .pending == []' \
+    "$home/data/delivery/contributions.json" >/dev/null \
+    || fail "an unsubmitted PENDING review was observed: $(cat "$home/data/delivery/contributions.json")"
+  out=$(project_delivery "$home")
+  printf '%s' "$out" | jq -e '.stale_verdicts == 0 and .rows[0].stale_verdicts == 0' >/dev/null \
+    || fail "an unsubmitted PENDING review produced a stale verdict: $out"
+  pass 'an unsubmitted PENDING review reaches neither reviews nor stale verdicts'
 }
 
 test_terminal_contribution_settles() {
@@ -924,7 +991,7 @@ test_large_backlog_contribution_input() {
 }
 
 failures=0
-for test_name in test_actor_coverage test_stale_verdict test_unchecked_is_not_silence test_newest_check_has_no_verdict test_comment_wake test_review_wake test_inline_wake test_ready_issue_wake test_fresh_issue_requires_maintainer test_missing_lane_remains_missing test_partial_freshness_keeps_measured_rows test_malformed_record_cannot_prove_silence test_issue_timeline_and_exact_ack test_verdict_retains_judged_head test_observed_replacement_refreshes_verdict test_unobserved_head_leaves_verdict_unknown test_away_yolo_is_fleet_work test_away_yolo_cross_home_is_fleet_work test_retired_and_unsupported_coverage test_unsupported_forge_is_not_fleet_work test_held_unsupported_forge_is_not_captain_work test_shared_contribution_signal_wakes_once test_watcher_keeps_diagnostics_separate_from_contribution_wakes test_expired_child_unsupported_forge_stays_unmeasured test_watcher_surfaces_new_contribution_once test_home_summary_coverage test_unreadable_pending_is_not_empty test_budget_refusal_between_calls test_budget_bounded_call_timeout test_genuine_failure_near_deadline_is_unavailable test_call_bound_admits_slow_forge_read test_local_timeout_is_not_a_forge_failure test_timeout_does_not_mask_a_forge_failure test_invalid_call_bound_refused test_observation_costs_one_forge_call test_shared_url_observed_once test_terminal_contribution_settles test_late_owner_inherits_terminal_observation test_done_task_open_pr_still_observed test_failure_wakes_once_per_episode test_late_owner_keeps_failure_episode_suppressed test_large_backlog_contribution_input; do
+for test_name in test_actor_coverage test_stale_verdict test_unchecked_is_not_silence test_newest_check_has_no_verdict test_comment_wake test_review_wake test_inline_wake test_ready_issue_wake test_fresh_issue_requires_maintainer test_missing_lane_remains_missing test_partial_freshness_keeps_measured_rows test_malformed_record_cannot_prove_silence test_issue_timeline_and_exact_ack test_verdict_retains_judged_head test_observed_replacement_refreshes_verdict test_unobserved_head_leaves_verdict_unknown test_away_yolo_is_fleet_work test_away_yolo_cross_home_is_fleet_work test_retired_and_unsupported_coverage test_unsupported_forge_is_not_fleet_work test_held_unsupported_forge_is_not_captain_work test_shared_contribution_signal_wakes_once test_watcher_keeps_diagnostics_separate_from_contribution_wakes test_expired_child_unsupported_forge_stays_unmeasured test_watcher_surfaces_new_contribution_once test_home_summary_coverage test_unreadable_pending_is_not_empty test_budget_refusal_between_calls test_budget_bounded_call_timeout test_genuine_failure_near_deadline_is_unavailable test_call_bound_admits_slow_forge_read test_local_timeout_is_not_a_forge_failure test_timeout_does_not_mask_a_forge_failure test_invalid_call_bound_refused test_observation_costs_one_forge_call test_shared_url_observed_once test_numeric_repository_name_observed test_expected_status_is_running test_pending_review_not_observed test_terminal_contribution_settles test_late_owner_inherits_terminal_observation test_done_task_open_pr_still_observed test_failure_wakes_once_per_episode test_late_owner_keeps_failure_episode_suppressed test_large_backlog_contribution_input; do
   ( "$test_name" ) || failures=$((failures + 1))
 done
 [ "$failures" -eq 0 ] || fail "$failures contribution regressions"

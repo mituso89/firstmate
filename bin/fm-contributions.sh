@@ -20,9 +20,11 @@
 # task and records[]. Each record contains url, kind, checked_at, error,
 # timeout, observation, verdict, seen event tokens, pending events, and
 # notified tokens.
-# observation is one atomic GraphQL read per URL: a PR's head cannot drift
-# from the checks and reviews it is bound to, which strengthens the coherence
-# a REST recheck could only approximate. Checks are normalized by name, id,
+# observation is one GraphQL read per URL. Its head ref and its latest commit
+# resolve separately, so a read whose rollup commit differs from the head
+# fails rather than pairing a new head with another commit's checks. The
+# viewer's unsubmitted PENDING reviews are not observed; an EXPECTED status
+# has not reported and counts as running. Checks are normalized by name, id,
 # started_at, status and conclusion; the rollup already holds the newest
 # attempt per distinct name. The last observation's lane names also disclose
 # a lane absent from the next head.
@@ -215,7 +217,7 @@ PR_QUERY='query($owner:String!,$name:String!,$number:Int!) {
       comments(last:100) { nodes { databaseId url createdAt updatedAt authorAssociation body author { login } } }
       reviews(last:100) { nodes { databaseId url submittedAt state authorAssociation body author { login } commit { oid } } }
       reviewThreads(last:100) { nodes { comments(last:100) { nodes { databaseId url createdAt updatedAt authorAssociation body author { login } commit { oid } } } } }
-      commits(last:1) { nodes { commit { statusCheckRollup { contexts(last:100) { nodes {
+      commits(last:1) { nodes { commit { oid statusCheckRollup { contexts(last:100) { nodes {
         __typename
         ... on CheckRun { name databaseId status conclusion startedAt }
         ... on StatusContext { id context state createdAt }
@@ -242,12 +244,13 @@ observe() { # canonical GitHub URL -> normalized JSON
   case "$kind" in pull|issues) ;; *) return 1 ;; esac
   owner=${part%/*}; name=${part##*/}
   if [ "$kind" = pull ]; then
-    forge api graphql -f query="$PR_QUERY" -F owner="$owner" -F name="$name" -F "number=$number" \
+    forge api graphql -f query="$PR_QUERY" -f owner="$owner" -f name="$name" -F "number=$number" \
       > "$TMP/graphql.json" || return 1
     jq -n --slurpfile g "$TMP/graphql.json" '
       ($g[0].data.repository) as $repo | ($repo.pullRequest) as $pr
+      | if ($pr.commits.nodes[0].commit.oid // null) != $pr.headRefOid then error("head moved during read") else . end
       | ($pr.comments.nodes | map(. + {_signal:"comment"})) as $c
-      | ($pr.reviews.nodes | map(. + {_signal:"review"})) as $r
+      | ($pr.reviews.nodes | map(select(.state != "PENDING") | . + {_signal:"review"})) as $r
       | ([$pr.reviewThreads.nodes[].comments.nodes[]] | map(. + {_signal:"review-comment"})) as $i
       | {head:$pr.headRefOid,
         state:(if $pr.merged then "merged" else ($pr.state | ascii_downcase) end),
@@ -265,17 +268,17 @@ observe() { # canonical GitHub URL -> normalized JSON
              started_at:.startedAt}
           else
             {name:.context,id:.id,started_at:.createdAt,
-             status:(if .state == "PENDING" then "in_progress" else "completed" end),
-             conclusion:(if .state == "PENDING" then null else (.state | ascii_downcase) end)} end)),
+             status:(if .state | IN("PENDING","EXPECTED") then "in_progress" else "completed" end),
+             conclusion:(if .state | IN("PENDING","EXPECTED") then null else (.state | ascii_downcase) end)} end)),
         events:(($c + $r + $i)
           | map(select((.author.login // "") != $pr.author.login and (.authorAssociation | IN("OWNER","MEMBER","COLLABORATOR")))
             | {token:(._signal + ":" + (.databaseId | tostring) + ":"
                 + (if ._signal == "review" then (.submittedAt // "") else (.updatedAt // "") end) + ":"
                 + (if ._signal == "review" then (.state // "") else "" end)),
                type:._signal,source:.url,head:(.commit.oid // null),
-               author:(.author.login // ""),body:(.body // "" | .[:500])}))}' > "$TMP/observation.json" || return 1
+               author:(.author.login // ""),body:(.body // "" | .[:500])}))}' > "$TMP/observation.json" 2> "$TMP/observe.err" || return 1
   else
-    forge api graphql -f query="$ISSUE_QUERY" -F owner="$owner" -F name="$name" -F "number=$number" \
+    forge api graphql -f query="$ISSUE_QUERY" -f owner="$owner" -f name="$name" -F "number=$number" \
       > "$TMP/graphql.json" || return 1
     label=${FM_CONTRIBUTIONS_READY_LABEL:-ready-for-pr}
     jq -n --arg label "$label" --slurpfile g "$TMP/graphql.json" '
