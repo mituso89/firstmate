@@ -1,0 +1,5 @@
+### base (8b61ef59) - poll 1, default budget and bounds, real gh
+/tmp/fmlive-run.sh: line 4: /tmp/fmlive/base/bin/fm-contributions.sh: No such file or directory
+rc=127 elapsed=0s
+--- per-record state
+(eval):12: no matches found: /tmp/fmlive/base/data/*/contributions.json

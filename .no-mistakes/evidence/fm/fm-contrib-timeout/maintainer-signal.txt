@@ -1,0 +1,24 @@
+### poll: PR 1729 (author TaiDang-TheAccessGroup, reviewed by member mitu1306) and issue cli/cli#1, real gh
+contributions: observation unavailable for https://github.com/cli/cli/issues/1
+contribution-wake: check: contributions t1729 b4d4b76d6796965e1451a3c9bf129649572d9ecea87a3a5ca0d098dd8c2b43cd
+contribution-wake: check: contributions t1729 07db4d10372809aaba00a577e4f33b1bbb313d166808af85364e44672dceccbe
+contribution-wake: check: contributions t1729 6b3cdcf77100a0eb5fd5698b0864a30407ef9568c064d32b2c6122d00c84fb20
+rc=0
+--- records
+{"url":"https://github.com/cli/cli/issues/1","error":"forge observation unavailable or changed during read","timeout":false,"state":null,"events":0,"truncated":null,"pending":0,"notified":0}
+{"url":"https://github.com/elay-io/outreach-back/pull/1729","error":null,"timeout":false,"state":"merged","events":3,"truncated":[],"pending":3,"notified":3}
+--- fm-contributions.sh pending (first 3, body trimmed)
+"count=3"
+{"task":"t1729","type":"comment","author":"mitu1306","source":"https://github.com/elay-io/outreach-back/pull/1729#issuecomment-5054541702","token":"comment:5054541702:2026-07-23T04:50:24Z:"}
+{"task":"t1729","type":"review-comment","author":"mitu1306","source":"https://github.com/elay-io/outreach-back/pull/1729#discussion_r3635617641","token":"review-comment:3635617641:2026-07-23T04:49:48Z:"}
+{"task":"t1729","type":"review","author":"mitu1306","source":"https://github.com/elay-io/outreach-back/pull/1729#pullrequestreview-4760862682","token":"review:4760862682:2026-07-23T04:49:48Z:COMMENTED"}
+--- wake queue entries (count, first 2)
+3
+1790099663	1	check	contribution-b4d4b76d6796965e1451a3c9bf129649572d9ecea87a3a5ca0d098dd8c2b43cd	check: contributions t1729 b4d4b76d6796965e1451a3c9bf129649572d9ecea87a3a5ca0d098dd8c2b43cd
+1790099663	2	check	contribution-07db4d10372809aaba00a577e4f33b1bbb313d166808af85364e44672dceccbe	check: contributions t1729 07db4d10372809aaba00a577e4f33b1bbb313d166808af85364e44672dceccbe
+### ack t1729 comment:5054541702:2026-07-23T04:50:24Z:
+rc=0
+pending count after ack: 2
+### second poll (1729 is merged -> final, not re-read, no duplicate wakes)
+rc=0
+wake entries now: 3

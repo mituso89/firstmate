@@ -1,0 +1,30 @@
+### base (8b61ef59) - poll 1, default budget and bounds, real gh
+rc=0 elapsed=20s
+--- per-record state
+--- pending count: 0
+### base (8b61ef59) - poll 2, default budget and bounds, real gh
+rc=0 elapsed=20s
+--- per-record state
+--- pending count: 0
+### change (5642465) - poll 1, default budget and bounds, real gh
+rc=0 elapsed=21s
+--- per-record state
+https://github.com/elay-io/outreach-back/pull/1711	2026-09-22T17:52:56Z	ok	timeout=false	head=68c771cf	checks=15
+https://github.com/elay-io/outreach-back/pull/1849	2026-09-22T17:52:56Z	ok	timeout=false	head=7d1beea3	checks=16
+https://github.com/elay-io/outreach-back/pull/1907	2026-09-22T17:52:56Z	ok	timeout=false	head=21044a03	checks=16
+https://github.com/elay-io/outreach-back/pull/1924	2026-09-22T17:52:56Z	ok	timeout=false	head=78239fb5	checks=16
+https://github.com/elay-io/outreach-back/pull/1931	2026-09-22T17:52:56Z	ok	timeout=false	head=218e68b9	checks=15
+--- pending count: 0
+### change (5642465) - poll 2, default budget and bounds, real gh
+rc=0 elapsed=20s
+--- per-record state
+https://github.com/elay-io/outreach-back/pull/1711	2026-09-22T17:52:56Z	ok	timeout=false	head=68c771cf	checks=15
+https://github.com/elay-io/outreach-back/pull/1849	2026-09-22T17:52:56Z	ok	timeout=false	head=7d1beea3	checks=16
+https://github.com/elay-io/outreach-back/pull/1907	2026-09-22T17:52:56Z	ok	timeout=false	head=21044a03	checks=16
+https://github.com/elay-io/outreach-back/pull/1924	2026-09-22T17:52:56Z	ok	timeout=false	head=78239fb5	checks=16
+https://github.com/elay-io/outreach-back/pull/1931	2026-09-22T17:52:56Z	ok	timeout=false	head=218e68b9	checks=15
+https://github.com/elay-io/outreach-back/pull/1936	2026-09-22T17:53:18Z	ok	timeout=false	head=f318b9cd	checks=15
+https://github.com/elay-io/outreach-back/pull/1955	2026-09-22T17:53:18Z	ok	timeout=false	head=bec890e9	checks=15
+https://github.com/elay-io/outreach-back/pull/1959	2026-09-22T17:53:18Z	ok	timeout=false	head=50c2bf23	checks=15
+https://github.com/elay-io/outreach-back/pull/1976	2026-09-22T17:53:18Z	ok	timeout=false	head=20777e0b	checks=25
+--- pending count: 0

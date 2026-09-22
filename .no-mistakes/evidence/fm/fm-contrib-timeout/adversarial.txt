@@ -1,0 +1,26 @@
+### A. real issue cli/cli#14500, default settings
+rc=0
+{"url":"https://github.com/cli/cli/issues/14500","error":null,"timeout":false,"kind":"issue","state":"closed","ready":false,"events":0,"truncated":[]}
+
+### B. adversarial: FM_CONTRIBUTIONS_CALL_BOUND=1 against the real ~4s forge read of PR 1931
+contributions: observation unavailable for https://github.com/elay-io/outreach-back/pull/1931
+rc=0 elapsed=1s
+{"url":"https://github.com/elay-io/outreach-back/pull/1931","error":"local per-call observation timeout after 1s","timeout":true,"observation":null}
+wake-queue lines: 0
+--- B2. second timed-out poll in the same episode (expect no repeat unavailable line)
+rc=0
+--- B3. default bound recovers the episode
+rc=0
+{"error":null,"timeout":false,"head":"218e68b9fd44683628e21ce9b5e522108ef40104"}
+
+### C. adversarial: nonexistent PR 999999 (genuine forge failure)
+contributions: observation unavailable for https://github.com/elay-io/outreach-back/pull/999999
+rc=0
+{"url":"https://github.com/elay-io/outreach-back/pull/999999","error":"forge observation unavailable or changed during read","timeout":false}
+--- C2. repeat poll: same episode, expect silence
+rc=0
+
+### D. digit-only repository name gabrielecirulli/2048 PR 1
+contribution-wake: check: contributions t1 d157a447bbb3e075870526063bb5e5793888b6c3aa4a8dab5a926a53f33ae6db
+rc=0
+{"url":"https://github.com/gabrielecirulli/2048/pull/1","error":null,"state":"merged","head":"914fdd0eac80482b559a445e9499dfe9f76ccc5b"}
