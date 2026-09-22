@@ -1,0 +1,23 @@
+### BASE (8b61ef5) poll against real GitHub, fresh home, 6 owned PRs
+exit=0 elapsed=20.079609498s
+records written: 0
+
+### NEW (1c52e96) poll against real GitHub, fresh home, same 6 owned PRs
+exit=0 elapsed=19.677351767s
+{"pr":"1711","checked_at":"2026-09-22T17:00:05Z","error":null,"timeout":false,"state":"merged","head":"68c771cf","checks":15,"events":0,"pending":0}
+{"pr":"1931","checked_at":"2026-09-22T17:00:05Z","error":null,"timeout":false,"state":"open","head":"218e68b9","checks":15,"events":0,"pending":0}
+{"pr":"1936","checked_at":"2026-09-22T17:00:05Z","error":null,"timeout":false,"state":"open","head":"f318b9cd","checks":15,"events":0,"pending":0}
+{"pr":"1955","checked_at":"2026-09-22T17:00:05Z","error":null,"timeout":false,"state":"open","head":"bec890e9","checks":15,"events":0,"pending":0}
+records written: 4
+
+### NEW second poll (continues with oldest first)
+exit=0 elapsed=20.108858364s
+{"pr":"1711","checked_at":"2026-09-22T17:00:05Z","error":null,"timeout":false,"state":"merged","head":"68c771cf","checks":15,"events":0,"pending":0}
+{"pr":"1931","checked_at":"2026-09-22T17:00:25Z","error":null,"timeout":false,"state":"open","head":"218e68b9","checks":15,"events":0,"pending":0}
+{"pr":"1936","checked_at":"2026-09-22T17:00:25Z","error":null,"timeout":false,"state":"open","head":"f318b9cd","checks":15,"events":0,"pending":0}
+{"pr":"1955","checked_at":"2026-09-22T17:00:05Z","error":null,"timeout":false,"state":"open","head":"bec890e9","checks":15,"events":0,"pending":0}
+{"pr":"1959","checked_at":"2026-09-22T17:00:25Z","error":null,"timeout":false,"state":"open","head":"50c2bf23","checks":15,"events":0,"pending":0}
+{"pr":"1976","checked_at":"2026-09-22T17:00:25Z","error":null,"timeout":false,"state":"open","head":"20777e0b","checks":25,"events":0,"pending":0}
+records written: 6
+
+### NEW pending

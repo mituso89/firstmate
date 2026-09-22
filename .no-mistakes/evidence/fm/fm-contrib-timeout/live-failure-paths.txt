@@ -1,0 +1,31 @@
+### records after the signal polls
+{"task":"numeric","url":"https://github.com/gabrielecirulli/2048/pull/1","error":null,"timeout":false,"state":"merged","events":1,"pending":1}
+{"task":"review","url":"https://github.com/cli/cli/pull/13982","error":null,"timeout":false,"state":"open","events":12,"pending":12}
+{"task":"talk","url":"https://github.com/cli/cli/pull/13899","error":null,"timeout":false,"state":"open","events":4,"pending":4}
+
+### poll with FM_CONTRIBUTIONS_CALL_BOUND=1 (real reads take ~4s) plus a nonexistent PR
+exit=0 elapsed=2.277351750s
+{"task":"gone","url":"https://github.com/cli/cli/pull/999999999","error":"local per-call observation timeout after 1s","timeout":true,"state":null,"events":0,"pending":0}
+{"task":"slow","url":"https://github.com/elay-io/outreach-back/pull/1931","error":"local per-call observation timeout after 1s","timeout":true,"state":null,"events":0,"pending":0}
+wake queue lines: 0
+
+### second poll, same conditions (failure episode must not re-announce)
+exit=0 elapsed=2.389857224s
+{"task":"gone","url":"https://github.com/cli/cli/pull/999999999","error":"local per-call observation timeout after 1s","timeout":true,"state":null,"events":0,"pending":0}
+{"task":"slow","url":"https://github.com/elay-io/outreach-back/pull/1931","error":"local per-call observation timeout after 1s","timeout":true,"state":null,"events":0,"pending":0}
+
+### recovery poll with default bound (12s)
+contributions: observation unavailable for https://github.com/cli/cli/pull/999999999
+exit=0 elapsed=3.194786205s
+{"task":"gone","url":"https://github.com/cli/cli/pull/999999999","error":"forge observation unavailable or changed during read","timeout":false,"state":null,"events":0,"pending":0}
+{"task":"slow","url":"https://github.com/elay-io/outreach-back/pull/1931","error":null,"timeout":false,"state":"open","events":0,"pending":0}
+
+### invalid bound refused
+fm-contributions: per-call observation bound must be 1..25 seconds
+exit=1
+
+### second genuine-failure poll (same episode, must stay quiet)
+exit=0 elapsed=9.231675815s
+
+### snapshot --all of the live signal home (Bearings projection input)
+{"known":3,"checked":3,"complete":true,"counts":{"captain":0,"fleet":2,"maintainer":0,"nobody":1},"errors":null}

@@ -1,0 +1,70 @@
+# Backlog
+
+## Queued
+- [ ] review - Inline review https://github.com/cli/cli/pull/13982 (repo: sample) (kind: ship)
+- [ ] talk - Maintainer comments https://github.com/cli/cli/pull/13899 (repo: sample) (kind: ship)
+- [ ] numeric - Digit-only repo https://github.com/gabrielecirulli/2048/pull/1 (repo: sample) (kind: ship)
+
+### poll (real gh, default bounds)
+contribution-wake: check: contributions numeric d157a447bbb3e075870526063bb5e5793888b6c3aa4a8dab5a926a53f33ae6db
+contribution-wake: check: contributions review 1031f8829816f3358ce97a00bddd25eee3664451c1169bff193f7f1d0d16bd14
+contribution-wake: check: contributions review 7356971c25c470e8971ff6c6e1f05b15a133ed04afc8d1ca566c301285bab987
+contribution-wake: check: contributions review 6fe36e420f4fda8e24afdf4005b58e5127f2eb921e6af76a6f190966979e59ab
+contribution-wake: check: contributions review 1fb8627c1afd5a33f643d8710aa0df51e54ad115f4210bac1108f8c6d5c6be3e
+contribution-wake: check: contributions review 49b60ccb67a7e153ca7f4cde716f332daa9c293fadfd06e692d2984b88bae741
+contribution-wake: check: contributions review daf0f07f098e1bcb62c37c730c9f96144b919defd99ba4ac1ece41c7f9013d51
+contribution-wake: check: contributions review d967aa037fe66a9e897adcaf7531038c4c23c0e5e45263e367e99d7e2c367735
+contribution-wake: check: contributions review b7c17492082b3e47eeacc94e6419d7dce5901466b4c0629d2a859b7daaa8e494
+contribution-wake: check: contributions review e8a0db7a468453145319535d41c543dc48021b74370a5a0c6d1906dfd489db07
+contribution-wake: check: contributions review bd8d882b1c57e7d6c725ad91550ce9bb9cabc2d1a506ed5492dc9993ec170fb3
+contribution-wake: check: contributions review 8a927a30685748208a4e14163ef5d43ffd7e4180ae4933c42ca4f2056d91eb5a
+contribution-wake: check: contributions review d7b1bce2481b8b00c004e04911d043cc7ba0c05dfc413da886de239969298077
+contribution-wake: check: contributions talk 9b73c03c9343d3298c81cbb77a7ba9bac03dfd972815f5d8687916080703acd8
+contribution-wake: check: contributions talk 702d59fd8a6aaed992dbe1456d691077f5064d35d59289cf2c25e25d0c030ddc
+contribution-wake: check: contributions talk 259c9ce60af242bf0f9ba5be99eb871f369db5a1136ff206564a6e4e18657506
+contribution-wake: check: contributions talk a0a532c14a75f6adde2eadf15518cb2e13af86280706736d02e867a3b7e1c3f5
+exit=0 elapsed=18.183471778s
+{"pr":"13899","checked_at":"2026-09-22T17:01:23Z","error":null,"timeout":false,"state":"open","head":"7031269e","checks":11,"events":4,"pending":4}
+records written: 1
+
+### pending maintainer signals
+{"task":"numeric","type":"comment","author":"gabrielecirulli","head":"","token":"comment:37208979:2014-03-10T17:23:38Z:","source":"https://github.com/gabrielecirulli/2048/pull/1#issuecomment-37208979"}
+{"task":"review","type":"review-comment","author":"BagToad","head":"a560bea9","token":"review-comment:3663075555:2026-07-28T05:42:11Z:","source":"https://github.com/cli/cli/pull/13982#discussion_r3663075555"}
+{"task":"review","type":"review-comment","author":"BagToad","head":"a560bea9","token":"review-comment:3663075560:2026-07-28T05:42:11Z:","source":"https://github.com/cli/cli/pull/13982#discussion_r3663075560"}
+{"task":"review","type":"review-comment","author":"BagToad","head":"a560bea9","token":"review-comment:3663075563:2026-07-28T05:42:11Z:","source":"https://github.com/cli/cli/pull/13982#discussion_r3663075563"}
+{"task":"review","type":"review-comment","author":"BagToad","head":"a560bea9","token":"review-comment:3663075566:2026-07-28T05:42:11Z:","source":"https://github.com/cli/cli/pull/13982#discussion_r3663075566"}
+{"task":"review","type":"review-comment","author":"BagToad","head":"a560bea9","token":"review-comment:3663075570:2026-07-28T05:42:11Z:","source":"https://github.com/cli/cli/pull/13982#discussion_r3663075570"}
+{"task":"review","type":"review-comment","author":"BagToad","head":"a560bea9","token":"review-comment:3663075575:2026-07-28T05:42:11Z:","source":"https://github.com/cli/cli/pull/13982#discussion_r3663075575"}
+{"task":"review","type":"review-comment","author":"BagToad","head":"a560bea9","token":"review-comment:3663075579:2026-07-28T05:42:11Z:","source":"https://github.com/cli/cli/pull/13982#discussion_r3663075579"}
+{"task":"review","type":"review-comment","author":"BagToad","head":"a560bea9","token":"review-comment:3663075582:2026-07-28T05:42:11Z:","source":"https://github.com/cli/cli/pull/13982#discussion_r3663075582"}
+{"task":"review","type":"review-comment","author":"BagToad","head":"538b4682","token":"review-comment:3663075584:2026-07-28T05:42:11Z:","source":"https://github.com/cli/cli/pull/13982#discussion_r3663075584"}
+{"task":"review","type":"review-comment","author":"BagToad","head":"a560bea9","token":"review-comment:3663075587:2026-07-28T05:42:11Z:","source":"https://github.com/cli/cli/pull/13982#discussion_r3663075587"}
+{"task":"review","type":"review-comment","author":"BagToad","head":"a560bea9","token":"review-comment:3663075593:2026-07-28T05:42:11Z:","source":"https://github.com/cli/cli/pull/13982#discussion_r3663075593"}
+{"task":"review","type":"review","author":"BagToad","head":"65fb1e00","token":"review:4794142826:2026-07-28T05:42:11Z:CHANGES_REQUESTED","source":"https://github.com/cli/cli/pull/13982#pullrequestreview-4794142826"}
+{"task":"talk","type":"comment","author":"BagToad","head":"","token":"comment:5027111857:2026-07-20T20:45:41Z:","source":"https://github.com/cli/cli/pull/13899#issuecomment-5027111857"}
+{"task":"talk","type":"comment","author":"BagToad","head":"","token":"comment:5495448694:2026-09-01T14:24:08Z:","source":"https://github.com/cli/cli/pull/13899#issuecomment-5495448694"}
+{"task":"talk","type":"comment","author":"BagToad","head":"","token":"comment:5495490258:2026-09-01T14:27:09Z:","source":"https://github.com/cli/cli/pull/13899#issuecomment-5495490258"}
+{"task":"talk","type":"review","author":"BagToad","head":"c82266c2","token":"review:4719388403:2026-07-17T04:43:37Z:CHANGES_REQUESTED","source":"https://github.com/cli/cli/pull/13899#pullrequestreview-4719388403"}
+
+### wake queue
+1790096488	1	check	contribution-d157a447bbb3e075870526063bb5e5793888b6c3aa4a8dab5a926a53f33ae6db	check: contributions numeric d157a447bbb3e075870526063bb5e5793888b6c3aa4a8dab5a926a53f33ae6db
+1790096493	2	check	contribution-1031f8829816f3358ce97a00bddd25eee3664451c1169bff193f7f1d0d16bd14	check: contributions review 1031f8829816f3358ce97a00bddd25eee3664451c1169bff193f7f1d0d16bd14
+1790096493	3	check	contribution-7356971c25c470e8971ff6c6e1f05b15a133ed04afc8d1ca566c301285bab987	check: contributions review 7356971c25c470e8971ff6c6e1f05b15a133ed04afc8d1ca566c301285bab987
+1790096494	4	check	contribution-6fe36e420f4fda8e24afdf4005b58e5127f2eb921e6af76a6f190966979e59ab	check: contributions review 6fe36e420f4fda8e24afdf4005b58e5127f2eb921e6af76a6f190966979e59ab
+1790096494	5	check	contribution-1fb8627c1afd5a33f643d8710aa0df51e54ad115f4210bac1108f8c6d5c6be3e	check: contributions review 1fb8627c1afd5a33f643d8710aa0df51e54ad115f4210bac1108f8c6d5c6be3e
+1790096494	6	check	contribution-49b60ccb67a7e153ca7f4cde716f332daa9c293fadfd06e692d2984b88bae741	check: contributions review 49b60ccb67a7e153ca7f4cde716f332daa9c293fadfd06e692d2984b88bae741
+1790096494	7	check	contribution-daf0f07f098e1bcb62c37c730c9f96144b919defd99ba4ac1ece41c7f9013d51	check: contributions review daf0f07f098e1bcb62c37c730c9f96144b919defd99ba4ac1ece41c7f9013d51
+1790096494	8	check	contribution-d967aa037fe66a9e897adcaf7531038c4c23c0e5e45263e367e99d7e2c367735	check: contributions review d967aa037fe66a9e897adcaf7531038c4c23c0e5e45263e367e99d7e2c367735
+1790096495	9	check	contribution-b7c17492082b3e47eeacc94e6419d7dce5901466b4c0629d2a859b7daaa8e494	check: contributions review b7c17492082b3e47eeacc94e6419d7dce5901466b4c0629d2a859b7daaa8e494
+1790096495	10	check	contribution-e8a0db7a468453145319535d41c543dc48021b74370a5a0c6d1906dfd489db07	check: contributions review e8a0db7a468453145319535d41c543dc48021b74370a5a0c6d1906dfd489db07
+1790096495	11	check	contribution-bd8d882b1c57e7d6c725ad91550ce9bb9cabc2d1a506ed5492dc9993ec170fb3	check: contributions review bd8d882b1c57e7d6c725ad91550ce9bb9cabc2d1a506ed5492dc9993ec170fb3
+1790096495	12	check	contribution-8a927a30685748208a4e14163ef5d43ffd7e4180ae4933c42ca4f2056d91eb5a	check: contributions review 8a927a30685748208a4e14163ef5d43ffd7e4180ae4933c42ca4f2056d91eb5a
+1790096495	13	check	contribution-d7b1bce2481b8b00c004e04911d043cc7ba0c05dfc413da886de239969298077	check: contributions review d7b1bce2481b8b00c004e04911d043cc7ba0c05dfc413da886de239969298077
+1790096501	14	check	contribution-9b73c03c9343d3298c81cbb77a7ba9bac03dfd972815f5d8687916080703acd8	check: contributions talk 9b73c03c9343d3298c81cbb77a7ba9bac03dfd972815f5d8687916080703acd8
+1790096501	15	check	contribution-702d59fd8a6aaed992dbe1456d691077f5064d35d59289cf2c25e25d0c030ddc	check: contributions talk 702d59fd8a6aaed992dbe1456d691077f5064d35d59289cf2c25e25d0c030ddc
+1790096501	16	check	contribution-259c9ce60af242bf0f9ba5be99eb871f369db5a1136ff206564a6e4e18657506	check: contributions talk 259c9ce60af242bf0f9ba5be99eb871f369db5a1136ff206564a6e4e18657506
+1790096501	17	check	contribution-a0a532c14a75f6adde2eadf15518cb2e13af86280706736d02e867a3b7e1c3f5	check: contributions talk a0a532c14a75f6adde2eadf15518cb2e13af86280706736d02e867a3b7e1c3f5
+
+### second poll (already-seen signals must not re-wake)
+exit=0 elapsed=10.308735377s
+wake queue lines: 17
