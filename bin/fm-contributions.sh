@@ -43,8 +43,8 @@
 # across polls. Each distinct URL is observed once per poll and applied to
 # every owner. A final observation applies to every owner without another
 # forge read. When the budget runs out mid-observation, the poll ends with
-# that URL's records untouched; only a genuine forge failure records an
-# error. A read killed at the per-call bound is a local timeout: it records a
+# that URL's records untouched; only a forge failure or a local timeout
+# records an error. A read killed at the per-call bound is a local timeout: it records a
 # distinct 'local per-call observation timeout after <N>s' error, marks the
 # record timeout:true, prints no unavailable line and raises no wake, because
 # it measures this host's latency rather than the contribution. A genuine
