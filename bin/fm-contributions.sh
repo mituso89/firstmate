@@ -27,7 +27,9 @@
 # has not reported and counts as running. Checks are normalized by name, id,
 # started_at, status and conclusion; the rollup already holds the newest
 # attempt per distinct name. The last observation's lane names also disclose
-# a lane absent from the next head.
+# a lane absent from the next head. Each connection reads its last 100 items;
+# observation.truncated names every window that came back full, so a partial
+# read is never presented as complete coverage.
 # A verdict records the EXACT judged head, source URL, actor and summary. A
 # comment's arrival time never supplies its judged head. Record a prose verdict
 # only after its source identifies that head; otherwise leave it unbound and
