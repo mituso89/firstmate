@@ -12,6 +12,7 @@ def valid_record:
     and all(.seen[]; type == "string")
     and ((.notified // []) | type == "array" and all(.[]; type == "string"))
     and (.error == null or (.error | type == "string"))
+    and ((.timeout // false) | type == "boolean")
     and (.checked_at == null or (.checked_at | fromdateiso8601 | type == "number"))
     and (.verdict == null or (.verdict | (.head | sha) and (.source | type == "string")
       and (.actor | IN("captain","fleet","maintainer","nobody")) and (.summary | type == "string")))

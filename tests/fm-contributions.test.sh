@@ -565,6 +565,7 @@ case "$fault:$*" in
   fail:'api repos/o/r/pulls/8/reviews?'*) printf 'HTTP 502\n' >&2; exit 1 ;;
   down:*) printf 'HTTP 502\n' >&2; exit 1 ;;
   hang:'api repos/o/r/pulls/8') sleep 4 ;;
+  slow:'api repos/o/r/pulls/8') sleep "$(cat "$FORGE/delay" 2>/dev/null || echo 1)" ;;
   head:'pr view '*) printf '{"headRefOid":"%s","reviewDecision":"APPROVED"}\n' "$(printf 'b%.0s' $(seq 40))"; exit 0 ;;
 esac
 exec "$(dirname "$0")/gh-fixture" "$@"
@@ -615,6 +616,85 @@ test_genuine_failure_near_deadline_is_unavailable() {
     and .records[0].error == "forge observation unavailable or changed during read"' \
     "$home/data/delivery/contributions.json" >/dev/null || fail 'a genuine forge failure left no error evidence'
   pass 'a genuine forge failure inside the budget still records the error and wakes'
+}
+
+test_call_bound_admits_slow_forge_read() {
+  local home out
+  home=$(new_home call-bound)
+  forge_home "$home"
+  wrap_forge "$home"
+  printf 'slow\n' > "$home/forge/fault"
+  printf '6\n' > "$home/forge/delay"
+  out=$(with_home "$home" "$ROOT/bin/fm-contributions.sh" poll) \
+    || fail 'a slow forge read inside the per-call bound failed'
+  [ -z "$out" ] || fail "a slow forge read inside the per-call bound printed: $out"
+  jq -e '.records[0].error == null and .records[0].observation != null' \
+    "$home/data/delivery/contributions.json" >/dev/null \
+    || fail 'a slow forge read inside the per-call bound recorded no observation'
+  out=$(with_home "$home" env FM_CONTRIBUTIONS_CALL_BOUND=5 "$ROOT/bin/fm-contributions.sh" poll) \
+    || fail 'the same slow read past a tighter per-call bound failed'
+  [ -z "$out" ] || fail "a local per-call timeout printed: $out"
+  jq -e '.records[0].error == "local per-call observation timeout after 5s"
+    and .records[0].timeout == true' "$home/data/delivery/contributions.json" >/dev/null \
+    || fail 'the per-call bound did not decide the slow read outcome'
+  pass 'the per-call bound admits a slow forge read and decides its timeout'
+}
+
+test_local_timeout_is_not_a_forge_failure() {
+  local home out
+  home=$(new_home local-timeout)
+  forge_home "$home"
+  wrap_forge "$home"
+  printf 'slow\n' > "$home/forge/fault"
+  printf '3\n' > "$home/forge/delay"
+  out=$(with_home "$home" env FM_CONTRIBUTIONS_CALL_BOUND=1 "$ROOT/bin/fm-contributions.sh" poll) \
+    || fail 'a locally timed-out read failed the poll'
+  [ -z "$out" ] || fail "a local per-call timeout printed an unavailable line: $out"
+  [ ! -s "$home/state/.wake-queue" ] || fail 'a local per-call timeout enqueued a wake'
+  jq -e '.records[0].error == "local per-call observation timeout after 1s"
+    and .records[0].timeout == true' "$home/data/delivery/contributions.json" >/dev/null \
+    || fail 'a local per-call timeout did not record its distinct error'
+  pass 'a local per-call timeout is silent, marked, and never a forge failure'
+}
+
+test_timeout_does_not_mask_a_forge_failure() {
+  local home out
+  home=$(new_home timeout-then-failure)
+  forge_home "$home"
+  wrap_forge "$home"
+  printf 'slow\n' > "$home/forge/fault"
+  printf '3\n' > "$home/forge/delay"
+  out=$(with_home "$home" env FM_CONTRIBUTIONS_CALL_BOUND=1 "$ROOT/bin/fm-contributions.sh" poll) \
+    || fail 'the timed-out poll failed'
+  [ -z "$out" ] || fail "the timed-out poll printed: $out"
+  printf 'fail\n' > "$home/forge/fault"
+  out=$(with_home "$home" "$ROOT/bin/fm-contributions.sh" poll) || fail 'the failing poll failed'
+  [ "$out" = 'contributions: observation unavailable for https://github.com/o/r/pull/8' ] \
+    || fail "a timeout-marked error masked a genuine forge failure: $out"
+  jq -e '.records[0].error == "forge observation unavailable or changed during read"
+    and .records[0].timeout == false' "$home/data/delivery/contributions.json" >/dev/null \
+    || fail 'a genuine failure after a timeout did not clear the timeout mark'
+  pass 'a local timeout never masks the next genuine forge failure'
+}
+
+test_invalid_call_bound_refused() {
+  local home bound expected
+  home=$(new_home invalid-call-bound)
+  forge_home "$home"
+  wrap_forge "$home"
+  for bound in 0 26 abc; do
+    case "$bound" in abc) expected='invalid per-call observation bound' ;;
+      *) expected='per-call observation bound must be 1..25 seconds' ;; esac
+    if with_home "$home" env FM_CONTRIBUTIONS_CALL_BOUND="$bound" "$ROOT/bin/fm-contributions.sh" poll \
+      > /dev/null 2> "$home/bound.err"; then
+      fail "per-call bound $bound was accepted"
+    fi
+    grep -F "$expected" "$home/bound.err" >/dev/null \
+      || fail "per-call bound $bound failed without naming its refusal: $(cat "$home/bound.err")"
+  done
+  with_home "$home" env FM_CONTRIBUTIONS_CALL_BOUND=12 "$ROOT/bin/fm-contributions.sh" poll >/dev/null \
+    || fail 'a valid per-call bound was refused'
+  pass 'an invalid per-call observation bound is refused by name while a valid bound polls'
 }
 
 test_shared_url_observed_once() {
@@ -811,7 +891,7 @@ test_large_backlog_contribution_input() {
 }
 
 failures=0
-for test_name in test_actor_coverage test_stale_verdict test_unchecked_is_not_silence test_newest_check_has_no_verdict test_comment_wake test_review_wake test_inline_wake test_ready_issue_wake test_fresh_issue_requires_maintainer test_missing_lane_remains_missing test_partial_freshness_keeps_measured_rows test_malformed_record_cannot_prove_silence test_issue_timeline_and_exact_ack test_verdict_retains_judged_head test_observed_replacement_refreshes_verdict test_unobserved_head_leaves_verdict_unknown test_away_yolo_is_fleet_work test_away_yolo_cross_home_is_fleet_work test_retired_and_unsupported_coverage test_unsupported_forge_is_not_fleet_work test_held_unsupported_forge_is_not_captain_work test_shared_contribution_signal_wakes_once test_watcher_keeps_diagnostics_separate_from_contribution_wakes test_expired_child_unsupported_forge_stays_unmeasured test_watcher_surfaces_new_contribution_once test_home_summary_coverage test_unreadable_pending_is_not_empty test_budget_refusal_between_calls test_budget_bounded_call_timeout test_genuine_failure_near_deadline_is_unavailable test_shared_url_observed_once test_terminal_contribution_settles test_late_owner_inherits_terminal_observation test_done_task_open_pr_still_observed test_failure_wakes_once_per_episode test_late_owner_keeps_failure_episode_suppressed test_large_backlog_contribution_input; do
+for test_name in test_actor_coverage test_stale_verdict test_unchecked_is_not_silence test_newest_check_has_no_verdict test_comment_wake test_review_wake test_inline_wake test_ready_issue_wake test_fresh_issue_requires_maintainer test_missing_lane_remains_missing test_partial_freshness_keeps_measured_rows test_malformed_record_cannot_prove_silence test_issue_timeline_and_exact_ack test_verdict_retains_judged_head test_observed_replacement_refreshes_verdict test_unobserved_head_leaves_verdict_unknown test_away_yolo_is_fleet_work test_away_yolo_cross_home_is_fleet_work test_retired_and_unsupported_coverage test_unsupported_forge_is_not_fleet_work test_held_unsupported_forge_is_not_captain_work test_shared_contribution_signal_wakes_once test_watcher_keeps_diagnostics_separate_from_contribution_wakes test_expired_child_unsupported_forge_stays_unmeasured test_watcher_surfaces_new_contribution_once test_home_summary_coverage test_unreadable_pending_is_not_empty test_budget_refusal_between_calls test_budget_bounded_call_timeout test_genuine_failure_near_deadline_is_unavailable test_call_bound_admits_slow_forge_read test_local_timeout_is_not_a_forge_failure test_timeout_does_not_mask_a_forge_failure test_invalid_call_bound_refused test_shared_url_observed_once test_terminal_contribution_settles test_late_owner_inherits_terminal_observation test_done_task_open_pr_still_observed test_failure_wakes_once_per_episode test_late_owner_keeps_failure_episode_suppressed test_large_backlog_contribution_input; do
   ( "$test_name" ) || failures=$((failures + 1))
 done
 [ "$failures" -eq 0 ] || fail "$failures contribution regressions"
