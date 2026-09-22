@@ -119,25 +119,41 @@ forge_home() {
 #!/usr/bin/env bash
 set -eu
 case "$*" in
-  'pr view '*headRefOid,reviewDecision*)
-    jq -n --arg head "$(cat "$FORGE/head")" '{headRefOid:$head,reviewDecision:"APPROVED"}' ;;
   'pr view '*headRefOid*) cat "$FORGE/head" ;;
-  'pr view '*state*) printf 'OPEN\n' ;;
-  'api repos/o/r/pulls/8')
-    jq -n --arg head "$(cat "$FORGE/head")" --arg state "$(cat "$FORGE/state" 2>/dev/null || printf open)" '
-      {state:(if $state == "open" then "open" else "closed" end),user:{login:"author"},head:{sha:$head},draft:false,
-       mergeable:(if $state == "open" then true else null end),
-       merged_at:(if $state == "merged" then "2026-09-16T07:00:00Z" else null end)}' ;;
-  'api repos/o/r/issues/9')
-    jq -n --slurpfile labels "$FORGE/labels.json" '{state:"open",user:{login:"author"},labels:$labels[0]}' ;;
-  'api repos/o/r/issues/'*'/events?'*) jq -s . "$FORGE/events.json" ;;
-  'api repos/o/r/issues/'*'/comments?'*) jq -s . "$FORGE/comments.json" ;;
-  'api repos/o/r/pulls/8/reviews?'*) jq -s . "$FORGE/reviews.json" ;;
-  'api repos/o/r/pulls/8/comments?'*) jq -s . "$FORGE/inline.json" ;;
-  'api repos/o/r/commits/'*'/check-runs?'*)
-    printf '[{"check_runs":[{"name":"test","id":1,"status":"completed","conclusion":"success","started_at":"2026-09-16T08:00:00Z"}]}]\n' ;;
-  'api repos/o/r/commits/'*'/statuses?'*) printf '[[]]\n' ;;
-  'api repos/o/r') printf '{"permissions":{"push":false}}\n' ;;
+  'api graphql '*pullRequest*)
+    jq -n --arg head "$(cat "$FORGE/head")" --arg state "$(cat "$FORGE/state" 2>/dev/null || printf open)" \
+      --slurpfile comments "$FORGE/comments.json" --slurpfile reviews "$FORGE/reviews.json" --slurpfile inline "$FORGE/inline.json" '
+      {data:{repository:{viewerPermission:"READ",
+        pullRequest:{
+          state:(if $state == "open" then "OPEN" else "CLOSED" end),
+          merged:($state == "merged"),isDraft:false,
+          mergeable:(if $state == "open" then "MERGEABLE" else null end),
+          headRefOid:$head,reviewDecision:"APPROVED",url:"https://github.com/o/r/pull/8",
+          author:{login:"author"},
+          comments:{nodes:[$comments[0][] | {databaseId:.id,url:.html_url,
+            createdAt:(.created_at // .updated_at),updatedAt:.updated_at,
+            authorAssociation:.author_association,body:.body,author:{login:.user.login}}]},
+          reviews:{nodes:[$reviews[0][] | {databaseId:.id,url:.html_url,submittedAt:.submitted_at,
+            state:.state,authorAssociation:.author_association,body:.body,
+            commit:{oid:.commit_id},author:{login:.user.login}}]},
+          reviewThreads:{nodes:[{comments:{nodes:[$inline[0][] | {databaseId:.id,url:.html_url,
+            createdAt:(.created_at // .updated_at),updatedAt:.updated_at,
+            authorAssociation:.author_association,body:.body,
+            commit:{oid:.commit_id},author:{login:.user.login}}]}}]},
+          commits:{nodes:[{commit:{statusCheckRollup:{contexts:{nodes:[
+            {__typename:"CheckRun",name:"test",databaseId:1,status:"COMPLETED",
+             conclusion:"SUCCESS",startedAt:"2026-09-16T08:00:00Z"}]}}}}]}}}}}' ;;
+  'api graphql '*)
+    jq -n --slurpfile labels "$FORGE/labels.json" --slurpfile comments "$FORGE/comments.json" \
+      --slurpfile events "$FORGE/events.json" '
+      {data:{repository:{issue:{
+        state:"OPEN",url:"https://github.com/o/r/issues/9",author:{login:"author"},
+        labels:{nodes:$labels[0]},
+        comments:{nodes:[$comments[0][] | {databaseId:.id,url:.html_url,
+          createdAt:(.created_at // .updated_at),updatedAt:.updated_at,
+          authorAssociation:.author_association,body:.body,author:{login:.user.login}}]},
+        timelineItems:{nodes:[$events[0][] | select(.event == "labeled")
+          | {id:(.id | tostring),createdAt:(.created_at // "2026-09-16T08:00:00Z"),label:{name:.label.name}}]}}}}}' ;;
   *) printf 'unexpected gh fixture call: %s\n' "$*" >&2; exit 1 ;;
 esac
 SH
@@ -557,23 +573,19 @@ set -eu
 printf '%s\n' "$*" >> "$FORGE/calls"
 fault=$(cat "$FORGE/fault" 2>/dev/null || true)
 case "$fault:$*" in
-  exhaust:'api repos/o/r/issues/8/comments?'*)
-    printf '%s\n' "$(( $(cat "$FORGE/clock") + 100 ))" > "$FORGE/clock" ;;
-  fail-late:'api repos/o/r/pulls/8/reviews?'*)
+  exhaust:'api graphql '*)
+    printf '%s\n' "$(( $(cat "$FORGE/clock") + 100 ))" > "$FORGE/clock"; sleep 4 ;;
+  fail-late:'api graphql '*)
     printf '%s\n' "$(( $(cat "$FORGE/clock") + 100 ))" > "$FORGE/clock"
     printf 'HTTP 502\n' >&2; exit 1 ;;
-  fail:'api repos/o/r/pulls/8/reviews?'*) printf 'HTTP 502\n' >&2; exit 1 ;;
+  fail:'api graphql '*) printf 'HTTP 502\n' >&2; exit 1 ;;
   down:*) printf 'HTTP 502\n' >&2; exit 1 ;;
-  hang:'api repos/o/r/pulls/8') sleep 4 ;;
-  slow:'api repos/o/r/pulls/8') sleep "$(cat "$FORGE/delay" 2>/dev/null || echo 1)" ;;
-  slow-all:*) sleep "$(cat "$FORGE/delay" 2>/dev/null || echo 1)" ;;
-  fail-slow:'api repos/o/r/pulls/8') sleep "$(cat "$FORGE/delay" 2>/dev/null || echo 1)" ;;
-  fail-slow:'api repos/o/r/pulls/8/reviews?'*) printf 'HTTP 502\n' >&2; exit 1 ;;
-  head:'pr view '*) printf '{"headRefOid":"%s","reviewDecision":"APPROVED"}\n' "$(printf 'b%.0s' $(seq 40))"; exit 0 ;;
+  hang:'api graphql '*) sleep 4 ;;
+  slow:'api graphql '*) sleep "$(cat "$FORGE/delay" 2>/dev/null || echo 1)" ;;
 esac
 exec "$(dirname "$0")/gh-fixture" "$@"
 SH
-  # A controllable clock lets the budget expire between two forge calls.
+  # A controllable clock lets the budget expire around a forge call.
   cat > "$home/fakebin/date" <<'SH'
 #!/bin/sh
 if [ "$*" = +%s ] && [ -f "$FORGE/clock" ]; then cat "$FORGE/clock"; else exec /bin/date "$@"; fi
@@ -593,7 +605,7 @@ test_budget_exhaustion_keeps_prior_record() { # exhaust|hang
   out=$(with_home "$home" env FM_CONTRIBUTIONS_BUDGET=1 "$ROOT/bin/fm-contributions.sh" poll) \
     || fail "poll failed when its budget ran out ($mode)"
   [ -z "$out" ] || fail "budget exhaustion ($mode) printed a wake line: $out"
-  grep -F 'api repos/o/r/pulls/8' "$home/forge/calls" >/dev/null \
+  grep -F 'api graphql' "$home/forge/calls" >/dev/null \
     || fail "budget exhaustion ($mode) never started the observation"
   cmp -s "$home/prior.json" "$home/data/delivery/contributions.json" \
     || fail "budget exhaustion ($mode) rewrote the prior record: $(cat "$home/data/delivery/contributions.json")"
@@ -700,51 +712,34 @@ test_invalid_call_bound_refused() {
   pass 'an invalid per-call observation bound is refused by name while a valid bound polls'
 }
 
-test_observation_reads_concurrently() {
+test_observation_costs_one_forge_call() {
   local home out
-  home=$(new_home concurrent-reads)
+  home=$(new_home one-call)
   forge_home "$home"
   wrap_forge "$home"
-  printf 'slow-all\n' > "$home/forge/fault"
+  printf 'slow\n' > "$home/forge/fault"
   printf '2\n' > "$home/forge/delay"
-  # Eight reads of two seconds each cannot finish inside a 12-second budget
-  # unless independent reads run concurrently.
-  out=$(with_home "$home" env FM_CONTRIBUTIONS_BUDGET=12 "$ROOT/bin/fm-contributions.sh" poll) \
-    || fail 'a concurrent observation inside the budget failed'
-  [ -z "$out" ] || fail "a concurrent observation printed: $out"
+  out=$(with_home "$home" env FM_CONTRIBUTIONS_BUDGET=5 "$ROOT/bin/fm-contributions.sh" poll) \
+    || fail 'a single-call observation inside a small budget failed'
+  [ -z "$out" ] || fail "a single-call observation printed: $out"
+  [ "$(grep -c '^api graphql' "$home/forge/calls")" = 1 ] \
+    || fail "one observation cost more than one forge call: $(cat "$home/forge/calls")"
   jq -e '.records[0].error == null and .records[0].observation != null' \
     "$home/data/delivery/contributions.json" >/dev/null \
-    || fail 'a concurrent observation recorded no observation'
-  pass 'independent forge reads complete concurrently inside the poll budget'
-}
-
-test_concurrent_phase_reports_genuine_failure_over_timeout() {
-  local home out
-  home=$(new_home fail-over-timeout)
-  forge_home "$home"
-  wrap_forge "$home"
-  printf 'fail-slow\n' > "$home/forge/fault"
-  printf '3\n' > "$home/forge/delay"
-  out=$(with_home "$home" env FM_CONTRIBUTIONS_CALL_BOUND=1 "$ROOT/bin/fm-contributions.sh" poll) \
-    || fail 'a mixed fail/timeout poll failed'
-  [ "$out" = 'contributions: observation unavailable for https://github.com/o/r/pull/8' ] \
-    || fail "a genuine failure beside a local timeout did not wake: $out"
-  jq -e '.records[0].error == "forge observation unavailable or changed during read"
-    and .records[0].timeout == false' "$home/data/delivery/contributions.json" >/dev/null \
-    || fail 'a genuine failure beside a local timeout recorded the wrong verdict'
-  pass 'a genuine failure in one slot outranks a local timeout in another'
+    || fail 'a single-call observation recorded no observation'
+  pass 'one observation costs exactly one forge call and fits a small budget'
 }
 
 test_shared_url_observed_once() {
   local mode home out calls expected
-  for mode in ok fail head; do
+  for mode in ok fail; do
     home=$(new_home "shared-once-$mode")
     forge_home "$home"
     wrap_forge "$home"
     printf -- '- [ ] duplicate - Filed https://github.com/o/r/pull/8 (repo: sample) (kind: ship)\n' >> "$home/data/backlog.md"
     printf '%s\n' "$mode" > "$home/forge/fault"
     out=$(with_home "$home" "$ROOT/bin/fm-contributions.sh" poll) || fail "shared-owner poll failed ($mode)"
-    calls=$(grep -cFx 'api repos/o/r/pulls/8' "$home/forge/calls")
+    calls=$(grep -c '^api graphql' "$home/forge/calls")
     [ "$calls" = 1 ] || fail "a URL owned by two tasks was observed $calls times in one poll ($mode)"
     if [ "$mode" = ok ]; then
       expected=null
@@ -759,7 +754,7 @@ test_shared_url_observed_once() {
         "$home/data/$task/contributions.json" >/dev/null || fail "owner $task did not receive the shared result ($mode)"
     done
   done
-  pass 'a URL owned by two tasks is observed once and every owner receives the result'
+  pass 'a URL owned by two tasks costs one forge call and every owner receives the result'
 }
 
 test_terminal_contribution_settles() {
@@ -839,7 +834,7 @@ test_done_task_open_pr_still_observed() {
   printf '%s\n' "$HEAD_B" > "$home/forge/head"
   with_home "$home" env FM_CONTRIBUTIONS_NOW="$later" "$ROOT/bin/fm-contributions.sh" poll >/dev/null \
     || fail 'second poll of a done task failed'
-  [ "$(grep -cFx 'api repos/o/r/pulls/8' "$home/forge/calls")" = 2 ] \
+  [ "$(grep -c '^api graphql' "$home/forge/calls")" = 2 ] \
     || fail 'an open PR linked from a done task was not observed on every poll'
   jq -e --arg head "$HEAD_B" --arg at "$later" '.records[0] | .checked_at == $at and .error == null
     and .observation.state == "open" and .observation.head == $head' \
@@ -861,7 +856,7 @@ test_failure_wakes_once_per_episode() {
   [ -z "$out" ] || fail "an unchanged read failure woke again on the next cycle: $out"
   jq -e --argjson error "$error" '.records[0] | .checked_at == "2026-09-16T10:00:00Z" and .error == $error' \
     "$home/data/delivery/contributions.json" >/dev/null || fail 'a repeated read failure stopped recording its error'
-  [ "$(grep -cFx 'api repos/o/r/pulls/8' "$home/forge/calls")" = 2 ] || fail 'a failing open PR stopped being observed'
+  [ "$(grep -c '^api graphql' "$home/forge/calls")" = 2 ] || fail 'a failing open PR stopped being observed'
   : > "$home/forge/fault"
   out=$(poll_at 2026-09-16T11:00:00Z)
   [ -z "$out" ] || fail "a successful read printed: $out"
@@ -929,7 +924,7 @@ test_large_backlog_contribution_input() {
 }
 
 failures=0
-for test_name in test_actor_coverage test_stale_verdict test_unchecked_is_not_silence test_newest_check_has_no_verdict test_comment_wake test_review_wake test_inline_wake test_ready_issue_wake test_fresh_issue_requires_maintainer test_missing_lane_remains_missing test_partial_freshness_keeps_measured_rows test_malformed_record_cannot_prove_silence test_issue_timeline_and_exact_ack test_verdict_retains_judged_head test_observed_replacement_refreshes_verdict test_unobserved_head_leaves_verdict_unknown test_away_yolo_is_fleet_work test_away_yolo_cross_home_is_fleet_work test_retired_and_unsupported_coverage test_unsupported_forge_is_not_fleet_work test_held_unsupported_forge_is_not_captain_work test_shared_contribution_signal_wakes_once test_watcher_keeps_diagnostics_separate_from_contribution_wakes test_expired_child_unsupported_forge_stays_unmeasured test_watcher_surfaces_new_contribution_once test_home_summary_coverage test_unreadable_pending_is_not_empty test_budget_refusal_between_calls test_budget_bounded_call_timeout test_genuine_failure_near_deadline_is_unavailable test_call_bound_admits_slow_forge_read test_local_timeout_is_not_a_forge_failure test_timeout_does_not_mask_a_forge_failure test_invalid_call_bound_refused test_observation_reads_concurrently test_concurrent_phase_reports_genuine_failure_over_timeout test_shared_url_observed_once test_terminal_contribution_settles test_late_owner_inherits_terminal_observation test_done_task_open_pr_still_observed test_failure_wakes_once_per_episode test_late_owner_keeps_failure_episode_suppressed test_large_backlog_contribution_input; do
+for test_name in test_actor_coverage test_stale_verdict test_unchecked_is_not_silence test_newest_check_has_no_verdict test_comment_wake test_review_wake test_inline_wake test_ready_issue_wake test_fresh_issue_requires_maintainer test_missing_lane_remains_missing test_partial_freshness_keeps_measured_rows test_malformed_record_cannot_prove_silence test_issue_timeline_and_exact_ack test_verdict_retains_judged_head test_observed_replacement_refreshes_verdict test_unobserved_head_leaves_verdict_unknown test_away_yolo_is_fleet_work test_away_yolo_cross_home_is_fleet_work test_retired_and_unsupported_coverage test_unsupported_forge_is_not_fleet_work test_held_unsupported_forge_is_not_captain_work test_shared_contribution_signal_wakes_once test_watcher_keeps_diagnostics_separate_from_contribution_wakes test_expired_child_unsupported_forge_stays_unmeasured test_watcher_surfaces_new_contribution_once test_home_summary_coverage test_unreadable_pending_is_not_empty test_budget_refusal_between_calls test_budget_bounded_call_timeout test_genuine_failure_near_deadline_is_unavailable test_call_bound_admits_slow_forge_read test_local_timeout_is_not_a_forge_failure test_timeout_does_not_mask_a_forge_failure test_invalid_call_bound_refused test_observation_costs_one_forge_call test_shared_url_observed_once test_terminal_contribution_settles test_late_owner_inherits_terminal_observation test_done_task_open_pr_still_observed test_failure_wakes_once_per_episode test_late_owner_keeps_failure_episode_suppressed test_large_backlog_contribution_input; do
   ( "$test_name" ) || failures=$((failures + 1))
 done
 [ "$failures" -eq 0 ] || fail "$failures contribution regressions"
