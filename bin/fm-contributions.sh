@@ -270,6 +270,8 @@ observe() { # canonical GitHub URL -> normalized JSON
              conclusion:(if .state | IN("PENDING","EXPECTED") then null else (.state | ascii_downcase) end)} end)),
         truncated:([(if ($pr.comments.nodes | length) == 100 then "comments" else empty end),
           (if ($pr.reviews.nodes | length) == 100 then "reviews" else empty end),
+          (if any($pr.reviews.nodes[] | select(.state != "PENDING"); (.comments.nodes | length) == 100)
+            then "review-comments" else empty end),
           (if (($pr.commits.nodes[0].commit.statusCheckRollup.contexts.nodes // []) | length) == 100
             then "contexts" else empty end)]),
         events:(($c + $r + $i)
@@ -288,7 +290,8 @@ observe() { # canonical GitHub URL -> normalized JSON
         ready:any($i.labels.nodes[]; (.name | ascii_downcase) == ($label | ascii_downcase)),
         checks:[],reviews:[],
         truncated:([(if ($i.comments.nodes | length) == 100 then "comments" else empty end),
-          (if ($i.timelineItems.nodes | length) == 100 then "timelineItems" else empty end)]),
+          (if ($i.timelineItems.nodes | length) == 100 then "timelineItems" else empty end),
+          (if ($i.labels.nodes | length) == 100 then "labels" else empty end)]),
         events:(($i.comments.nodes
           | map(select((.author.login // "") != $i.author.login and (.authorAssociation | IN("OWNER","MEMBER","COLLABORATOR")))
             | {token:("comment:" + (.databaseId | tostring) + ":" + (.updatedAt // "")),type:"comment",source:.url,

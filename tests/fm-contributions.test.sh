@@ -768,6 +768,14 @@ test_full_connection_window_discloses_truncation() {
   jq -e '.records[0].error == null and .records[0].observation.truncated == ["comments"]' \
     "$home/data/delivery/contributions.json" >/dev/null \
     || fail 'a full connection window was not disclosed on the record'
+  printf '[]\n' > "$home/forge/comments.json"
+  jq -n --arg head "$HEAD_B" '[range(1; 101) | {id:.,user:{login:"maintainer"},author_association:"MEMBER",
+    body:"nit",html_url:"https://github.com/o/r/pull/8#discussion_r1",
+    updated_at:"2026-09-16T08:01:00Z",commit_id:$head}]' > "$home/forge/inline.json"
+  with_home "$home" "$ROOT/bin/fm-contributions.sh" poll >/dev/null || fail 'a full inline-window poll failed'
+  jq -e '.records[0].error == null and .records[0].observation.truncated == ["review-comments"]' \
+    "$home/data/delivery/contributions.json" >/dev/null \
+    || fail "a full per-review inline window was not disclosed: $(cat "$home/data/delivery/contributions.json")"
   pass 'a full connection window records its truncation on the observation'
 }
 
