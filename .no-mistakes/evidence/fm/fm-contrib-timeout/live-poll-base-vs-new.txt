@@ -1,23 +1,25 @@
-### BASE (8b61ef5) poll against real GitHub, fresh home, 6 owned PRs
-exit=0 elapsed=20.079609498s
-records written: 0
+=== BASE 8b61ef5: 3 consecutive polls, real gh, 9 real PRs ===
+poll 1: 20s rc=0 output: <none>
+poll 2: 20s rc=0 output: <none>
+poll 3: 20s rc=0 output: <none>
+records written:
+recs: no matches found: /tmp/fmlive-base/data/*/contributions.json
+  (none - nothing observed)
 
-### NEW (1c52e96) poll against real GitHub, fresh home, same 6 owned PRs
-exit=0 elapsed=19.677351767s
-{"pr":"1711","checked_at":"2026-09-22T17:00:05Z","error":null,"timeout":false,"state":"merged","head":"68c771cf","checks":15,"events":0,"pending":0}
-{"pr":"1931","checked_at":"2026-09-22T17:00:05Z","error":null,"timeout":false,"state":"open","head":"218e68b9","checks":15,"events":0,"pending":0}
-{"pr":"1936","checked_at":"2026-09-22T17:00:05Z","error":null,"timeout":false,"state":"open","head":"f318b9cd","checks":15,"events":0,"pending":0}
-{"pr":"1955","checked_at":"2026-09-22T17:00:05Z","error":null,"timeout":false,"state":"open","head":"bec890e9","checks":15,"events":0,"pending":0}
-records written: 4
+=== NEW 1c52e96: polls until every PR observed ===
+poll 1: 20s rc=0 output: <none>
+poll 2: 21s rc=0 output: <none>
+poll 3: 20s rc=0 output: <none>
+poll 4: 20s rc=0 output: <none>
+records written:
+{"url":"1711","checked_at":"2026-09-22T17:15:48Z","error":null,"timeout":false,"state":"merged","head":"68c771cf","checks":15,"reviews":3,"events":0}
+{"url":"1849","checked_at":"2026-09-22T17:16:49Z","error":null,"timeout":false,"state":"open","head":"7d1beea3","checks":16,"reviews":3,"events":0}
+{"url":"1907","checked_at":"2026-09-22T17:16:29Z","error":null,"timeout":false,"state":"open","head":"21044a03","checks":16,"reviews":1,"events":0}
+{"url":"1924","checked_at":"2026-09-22T17:16:29Z","error":null,"timeout":false,"state":"open","head":"78239fb5","checks":16,"reviews":1,"events":0}
+{"url":"1931","checked_at":"2026-09-22T17:16:29Z","error":null,"timeout":false,"state":"open","head":"218e68b9","checks":15,"reviews":3,"events":0}
+{"url":"1936","checked_at":"2026-09-22T17:16:49Z","error":null,"timeout":false,"state":"open","head":"f318b9cd","checks":15,"reviews":1,"events":0}
+{"url":"1955","checked_at":"2026-09-22T17:16:49Z","error":null,"timeout":false,"state":"open","head":"bec890e9","checks":15,"reviews":1,"events":0}
+{"url":"1959","checked_at":"2026-09-22T17:16:49Z","error":null,"timeout":false,"state":"open","head":"50c2bf23","checks":15,"reviews":1,"events":0}
+{"url":"1976","checked_at":"2026-09-22T17:16:29Z","error":null,"timeout":false,"state":"open","head":"20777e0b","checks":25,"reviews":1,"events":0}
 
-### NEW second poll (continues with oldest first)
-exit=0 elapsed=20.108858364s
-{"pr":"1711","checked_at":"2026-09-22T17:00:05Z","error":null,"timeout":false,"state":"merged","head":"68c771cf","checks":15,"events":0,"pending":0}
-{"pr":"1931","checked_at":"2026-09-22T17:00:25Z","error":null,"timeout":false,"state":"open","head":"218e68b9","checks":15,"events":0,"pending":0}
-{"pr":"1936","checked_at":"2026-09-22T17:00:25Z","error":null,"timeout":false,"state":"open","head":"f318b9cd","checks":15,"events":0,"pending":0}
-{"pr":"1955","checked_at":"2026-09-22T17:00:05Z","error":null,"timeout":false,"state":"open","head":"bec890e9","checks":15,"events":0,"pending":0}
-{"pr":"1959","checked_at":"2026-09-22T17:00:25Z","error":null,"timeout":false,"state":"open","head":"50c2bf23","checks":15,"events":0,"pending":0}
-{"pr":"1976","checked_at":"2026-09-22T17:00:25Z","error":null,"timeout":false,"state":"open","head":"20777e0b","checks":25,"events":0,"pending":0}
-records written: 6
-
-### NEW pending
+pending:

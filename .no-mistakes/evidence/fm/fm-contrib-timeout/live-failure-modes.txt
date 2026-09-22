@@ -1,0 +1,22 @@
+=== A: local per-call timeout (FM_CONTRIBUTIONS_CALL_BOUND=1, real gh ~4-5s) ===
+poll 1 output: 
+poll 2 output: 
+{"url":"https://github.com/elay-io/outreach-back/pull/1931","error":"local per-call observation timeout after 1s","timeout":true,"state":null,"head":""}
+then default bound recovers:
+poll output: 
+{"url":"https://github.com/elay-io/outreach-back/pull/1931","error":null,"timeout":false,"state":"open","head":"218e68b9"}
+
+=== B: genuine forge failure (PR number that does not exist) ===
+poll 1 output: contributions: observation unavailable for https://github.com/elay-io/outreach-back/pull/999999
+poll 2 output: 
+{"url":"https://github.com/elay-io/outreach-back/pull/999999","error":"forge observation unavailable or changed during read","timeout":false,"state":null,"head":""}
+
+=== C: forge failure after a local timeout still announces ===
+poll 1 (bound=1) output: 
+{"url":"https://github.com/elay-io/outreach-back/pull/999999","error":"local per-call observation timeout after 1s","timeout":true,"state":null,"head":""}
+poll 2 (default) output: contributions: observation unavailable for https://github.com/elay-io/outreach-back/pull/999999
+{"url":"https://github.com/elay-io/outreach-back/pull/999999","error":"forge observation unavailable or changed during read","timeout":false,"state":null,"head":""}
+
+=== D: digit-only repo name (gabrielecirulli/2048) ===
+poll output: contribution-wake: check: contributions t20481 d157a447bbb3e075870526063bb5e5793888b6c3aa4a8dab5a926a53f33ae6db
+{"url":"https://github.com/gabrielecirulli/2048/pull/1","error":null,"timeout":false,"state":"merged","head":"914fdd0e"}

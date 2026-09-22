@@ -1,0 +1,11 @@
+=== maintainer signal on real PR elay-io/outreach-back#1916 ===
+--- forge truth (gh, maintainer comments/reviews not by author):
+5758476210 comment mitu1306 MEMBER
+--- poll 1:
+contribution-wake: check: contributions sig f8d731f02abfb778f90e8e444527f5ea0048d7ca4f7440bc511b8bf99705c8fb
+--- pending after poll 1:
+{"type":"comment","author":"mitu1306","token":"comment:5758476210:2026-09-21T09:43:21Z:"}
+--- wake queue:
+1790097468	1	check	contribution-f8d731f02abfb778f90e8e444527f5ea0048d7ca4f7440bc511b8bf99705c8fb	check: contributions sig f8d731f02abfb778f90e8e444527f5ea0048d7ca4f7440bc511b8bf99705c8fb
+--- poll 2 (must not duplicate wakes):
+wake lines: 1

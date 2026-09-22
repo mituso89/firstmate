@@ -1,0 +1,26 @@
+=== snapshot projection after live polls (9 real PRs) ===
+{
+  "known": 9,
+  "checked": 9,
+  "complete": true,
+  "counts": {
+    "captain": 1,
+    "fleet": 7,
+    "maintainer": 0,
+    "nobody": 1
+  },
+  "errors": null,
+  "captain": [
+    {
+      "url": "https://github.com/elay-io/outreach-back/pull/1849",
+      "reason": "checks green; merge approval needed"
+    }
+  ]
+}
+=== single GraphQL read latency (PR_QUERY-sized) ===
+218e68b9fd44683628e21ce9b5e522108ef40104
+4.39s
+218e68b9fd44683628e21ce9b5e522108ef40104
+4.26s
+218e68b9fd44683628e21ce9b5e522108ef40104
+4.29s
