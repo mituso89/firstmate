@@ -34,9 +34,12 @@
 # poll consumes fm-fleet-snapshot.sh --contribution-input, a local-only read,
 # and spends at most FM_CONTRIBUTIONS_BUDGET seconds on forge reads (default 20,
 # 1..25). Each gh call is bounded by the lesser of the remaining budget and
-# FM_CONTRIBUTIONS_CALL_BOUND seconds (default 12, 1..25). Oldest observations
-# go first, so a large corpus progresses across polls. Each distinct URL is
-# observed once per poll and applied to every owner. A final observation
+# FM_CONTRIBUTIONS_CALL_BOUND seconds (default 12, 1..25). Reads that do not
+# depend on the head are issued concurrently under that one budget;
+# head-dependent reads follow, and the head recheck stays last so the
+# observation remains one coherent read. Oldest observations go first, so a
+# large corpus progresses across polls. Each distinct URL is observed once
+# per poll and applied to every owner. A final observation
 # applies to every owner without another forge read. When the budget runs out
 # mid-observation, the poll ends with that URL's records untouched; only a
 # genuine forge failure or head change records an error. A read killed at the
@@ -187,39 +190,88 @@ write_record() { # task record-json-file
   mv -f -- "$staged" "$file"
 }
 
-forge() {
-  local remaining bounded=0 rc=0
+forge() { # args...; FORGE_SLOT names its scratch files so concurrent reads never collide
+  local slot=${FORGE_SLOT:-solo} remaining bounded=0 rc=0
   remaining=$((DEADLINE - $(date +%s)))
   # The budget, not the forge, refused this read.
-  [ "$remaining" -gt 0 ] || { BUDGET_EXHAUSTED=1; return 1; }
+  if [ "$remaining" -le 0 ]; then
+    printf 'budget\n' > "$TMP/$slot.class"; BUDGET_EXHAUSTED=1; return 1
+  fi
   if [ "$remaining" -le "$CALL_BOUND" ]; then bounded=1; else remaining=$CALL_BOUND; fi
   fm_run_timed "$remaining" env GH_PROMPT_DISABLED=1 GH_NO_UPDATE_NOTIFIER=1 \
-    gh "$@" 2> "$TMP/forge.err" || rc=$?
+    gh "$@" 2> "$TMP/$slot.err" || rc=$?
   # A read killed at the budget's own deadline is budget exhaustion too; one
   # killed at the per-call bound is a local timeout, not a forge failure.
-  if [ "$rc" -eq 124 ]; then
-    if [ "$bounded" -eq 1 ]; then BUDGET_EXHAUSTED=1; else CALL_TIMED_OUT=1; fi
+  if [ "$rc" -eq 0 ]; then printf 'ok\n' > "$TMP/$slot.class"
+  elif [ "$rc" -eq 124 ] && [ "$bounded" -eq 1 ]; then printf 'budget\n' > "$TMP/$slot.class"
+  elif [ "$rc" -eq 124 ]; then printf 'timeout\n' > "$TMP/$slot.class"
+  else printf 'fail\n' > "$TMP/$slot.class"
   fi
+  [ "$rc" -ne 124 ] || [ "$bounded" -eq 0 ] || BUDGET_EXHAUSTED=1
+  [ "$rc" -ne 124 ] || [ "$bounded" -eq 1 ] || CALL_TIMED_OUT=1
   return "$rc"
+}
+
+# A phase's verdict from its slots. Genuine failure outranks budget exhaustion
+# because a real forge error is evidence that must not be hidden; a local
+# timeout is the benign case and ranks last.
+forge_reconcile() { # slot...
+  local slot class worst=ok
+  for slot in "$@"; do
+    class=$(cat "$TMP/$slot.class" 2>/dev/null || printf 'fail\n')
+    case "$class" in
+      fail) worst=fail ;;
+      budget) [ "$worst" = fail ] || worst=budget ;;
+      timeout) [ "$worst" = fail ] || [ "$worst" = budget ] || worst=timeout ;;
+    esac
+  done
+  case "$worst" in
+    fail) return 1 ;;
+    budget) BUDGET_EXHAUSTED=1; return 1 ;;
+    timeout) CALL_TIMED_OUT=1; return 1 ;;
+  esac
+  return 0
 }
 
 observe() { # canonical GitHub URL -> normalized JSON
   local url=$1 part number kind endpoint head after label
+  local pid_core pid_comments pid_reviews pid_inline pid_repo pid_events
+  local pid_checks pid_statuses
   case "$url" in https://github.com/*) ;; *) return 1 ;; esac
   part=${url#https://github.com/}; number=${part##*/}; part=${part%/*}; kind=${part##*/}; part=${part%/*}
   case "$kind" in pull) endpoint="repos/$part/pulls/$number" ;; issues) endpoint="repos/$part/issues/$number" ;; *) return 1 ;; esac
-  forge api "$endpoint" > "$TMP/core.json" || return 1
+  rm -f "$TMP"/*.class
+  # Every read that does not need the head runs concurrently under the budget.
+  FORGE_SLOT=core forge api "$endpoint" > "$TMP/core.json" & pid_core=$!
+  FORGE_SLOT=comments forge api "repos/$part/issues/$number/comments?per_page=100" --paginate --slurp \
+    > "$TMP/comments.json" & pid_comments=$!
+  if [ "$kind" = pull ]; then
+    FORGE_SLOT=reviews forge api "$endpoint/reviews?per_page=100" --paginate --slurp \
+      > "$TMP/reviews.json" & pid_reviews=$!
+    FORGE_SLOT=inline forge api "$endpoint/comments?per_page=100" --paginate --slurp \
+      > "$TMP/inline.json" & pid_inline=$!
+    FORGE_SLOT=repo forge api "repos/$part" > "$TMP/repo.json" & pid_repo=$!
+    wait "$pid_core" "$pid_comments" "$pid_reviews" "$pid_inline" "$pid_repo" || true
+    forge_reconcile core comments reviews inline repo || return 1
+  else
+    FORGE_SLOT=events forge api "repos/$part/issues/$number/events?per_page=100" --paginate --slurp \
+      > "$TMP/issue-events.json" & pid_events=$!
+    wait "$pid_core" "$pid_comments" "$pid_events" || true
+    forge_reconcile core comments events || return 1
+  fi
   jq -e '(.state == "open" or .state == "closed") and (.user.login | type == "string")' "$TMP/core.json" >/dev/null || return 1
-  forge api "repos/$part/issues/$number/comments?per_page=100" --paginate --slurp > "$TMP/comments.json" || return 1
   jq -e 'type == "array" and all(.[]; type == "array")' "$TMP/comments.json" >/dev/null || return 1
   if [ "$kind" = pull ]; then
     head=$(jq -er '.head.sha | select(test("^[a-fA-F0-9]{40}$"))' "$TMP/core.json") || return 1
-    forge api "$endpoint/reviews?per_page=100" --paginate --slurp > "$TMP/reviews.json" || return 1
-    forge api "$endpoint/comments?per_page=100" --paginate --slurp > "$TMP/inline.json" || return 1
-    forge api "repos/$part/commits/$head/check-runs?filter=all&per_page=100" --paginate --slurp > "$TMP/checks.json" || return 1
-    forge api "repos/$part/commits/$head/statuses?per_page=100" --paginate --slurp > "$TMP/statuses.json" || return 1
-    forge api "repos/$part" > "$TMP/repo.json" || return 1
-    forge pr view "$url" --json headRefOid,reviewDecision > "$TMP/after.json" || return 1
+    FORGE_SLOT=checks forge api "repos/$part/commits/$head/check-runs?filter=all&per_page=100" --paginate --slurp \
+      > "$TMP/checks.json" & pid_checks=$!
+    FORGE_SLOT=statuses forge api "repos/$part/commits/$head/statuses?per_page=100" --paginate --slurp \
+      > "$TMP/statuses.json" & pid_statuses=$!
+    wait "$pid_checks" "$pid_statuses" || true
+    forge_reconcile checks statuses || return 1
+    # The head recheck stays last so the observation remains one coherent read.
+    FORGE_SLOT=after forge pr view "$url" --json headRefOid,reviewDecision > "$TMP/after.json" || true
+    forge_reconcile after || return 1
     after=$(jq -er .headRefOid "$TMP/after.json")
     [ "$head" = "$after" ] || { printf 'head changed during observation\n' > "$TMP/forge.err"; return 1; }
     jq -n --slurpfile core "$TMP/core.json" --slurpfile comments "$TMP/comments.json" \
@@ -243,7 +295,6 @@ observe() { # canonical GitHub URL -> normalized JSON
                  author:.user.login,body:(.body // "" | .[:500])}))}' > "$TMP/observation.json" || return 1
   else
     label=${FM_CONTRIBUTIONS_READY_LABEL:-ready-for-pr}
-    forge api "repos/$part/issues/$number/events?per_page=100" --paginate --slurp > "$TMP/issue-events.json" || return 1
     jq -n --slurpfile timeline "$TMP/issue-events.json" --arg label "$label" --slurpfile core "$TMP/core.json" --slurpfile comments "$TMP/comments.json" '
       $core[0] as $c | {state:$c.state,head:null,
         ready:any($c.labels[]; (.name | ascii_downcase) == ($label | ascii_downcase)),
