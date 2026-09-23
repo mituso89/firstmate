@@ -1,47 +1,57 @@
-# Devin
+# Devin CLI
 
-Adapter facts sourced from Devin CLI 3000.6.12 (docs + `devin --help`) and live self-detection on 2026-09-03, then verified live end to end on devin 3000.10.31 on 2026-09-17 (`../../../docs/verification/runtime-backends.md` "Devin").
-Devin is verified for crewmate and scout work only; it is refused as a secondmate and primary until its primary supervision integration lands (see `../../../bin/fm-spawn.sh`).
+Verified on 2026-09-21 and 2026-09-22 with Devin CLI 3000.11.1 (cc4e349ca55e).
+The router owns the crewmate/scout-only boundary; primary and secondmate integration is unsupported.
+[Verification evidence](../../../../../docs/verification/devin.md) and its live guard refresh the vendor facts below.
 
 ## Operating facts
 
 | Fact | Value |
 |---|---|
-| Launch | `devin --permission-mode dangerous [--model <m>] -- "<brief>"`. The prompt after `--` starts a supervised interactive session. `dangerous` (aliases `yolo`/`bypass`) auto-approves every tool, the equivalent of Claude's `--dangerously-skip-permissions`. |
-| Busy | Owned hooks in the worktree's `.devin/hooks.v1.json`: `UserPromptSubmit` opens a turn; `Stop` and `SessionEnd` close it. Devin emits no `StopFailure`, so `SessionEnd` is the abnormal-end backstop. Source name `devin-hook` (`../../../bin/fm-busy-lib.sh`). |
-| Turn-end | The `Stop` hook also touches `state/<id>.turn-ended` for the watcher, like codex's `notify`. |
-| Exit | `/exit` (alias `/quit`; bare `exit`/`quit` also work). |
-| Interrupt | Double `Escape` cancels a running turn with an empty composer; a single press does not. On an idle Devin a double Escape opens a rewind picker, so the control plane follows with one closing Escape (`../../../bin/fm-control-lib.sh`). A cancel fires no hook, so the busy record stays busy, as with Claude. |
-| Skill | `/<skill>`, e.g. `/no-mistakes`. |
-| Model | `--model <model>`; accepts fuzzy names (family slug, alias, or partial, e.g. `--model opus`). Discover with `devin models`. |
-| Composer | `❭` plus a grey placeholder, read as empty by the shared composer classifier; typed text reads pending. |
-| Effort | None. Devin exposes no effort/reasoning CLI flag (thinking level is interactive, `Alt+T`), so the shared effort axis stays in task metadata only, like cursor/kimi. |
+| Busy state | Native `UserPromptSubmit` opens, `Stop` closes normal completion, and `SessionEnd` closes shutdown through the generation-bound writer; `../../../bin/fm-busy-lib.sh` owns trust. |
+| Exit command | `/quit`, with the shared slash-command settle before Enter; prints `devin -r <session-id>`. |
+| Interrupt | One Esc, then a second only after the running turn renders `esc again to interrupt` and at least 0.5 seconds later; no restored draft and no clear key. An idle agent gets one press and `cancel=not-running`, because a fast idle pair opens the `/revert` picker, where Enter reverts file changes. |
+| Skill invocation | `/<skill>`, for example `/no-mistakes`; Devin discovers Firstmate's user skills from `~/.agents/skills`, and `fm-send` types the slash form through its popup settle. |
+| Resume | `devin -r <session-id>`; `--model` may switch the resumed session's model. |
+| Model flag | `--model <model-id>`, including `swe-2-medium` and account-listed `fusion-<lead>-sidekick-swe-2-medium` ids. |
+| Effort flag | None; effort is encoded in the model id, and Firstmate records the independent axis without passing it. |
+| Model discovery | `devin models list`; authentication preflight is `devin auth status`. |
+| Marker | None; anchored native `devin` ancestry identifies the adapter and outranks foreign inherited markers. |
+| Trust dialogs | The launch skips workspace trust for this run; the spawn owner carries the exact flags. |
+| Imported config | The worker config sets `read_config_from.claude` false, so no Claude Code hook, `CLAUDE.md` rule, `.claude/skills`, or Claude MCP entry is imported; `AGENTS.md` and `.agents/skills` still load. |
+| Commit attribution | The worker config sets `attribution` false, Devin's switch for its `Co-Authored-By` trailer and `Generated with Devin` line. |
 
-## Detection
+## Worker lifecycle limits
 
-Detected by process ancestry (`comm=devin`), deliberately NOT by an env marker.
-Devin does export `CHISEL_SESSION_DB` to its tool subprocesses, but promoting it to a marker would misidentify a markerless crewmate (codex, opencode, kimi, muse) launched from a devin primary, which inherits it before its own ancestry is consulted.
-Because Devin has no marker of its own, the reverse hazard also holds: a Devin worker launched under a claude, pi, grok, cursor, or gemini primary would inherit that primary's marker and be misread, so `../../../bin/fm-spawn.sh` clears all of those at the Devin launch boundary, exactly as it does for muse and gemini.
-`../../../bin/fm-harness.sh` owns the detection rule.
+An armed double Esc renders `Canceled. What should Devin do?` and restores the empty composer but emits no `Stop` hook on this version.
+The control plane therefore invalidates the interrupted incarnation to `unknown`, with `cancel=unconfirmed`; it never fabricates semantic idle from a delivered key.
+A manual keyboard cancellation outside that control plane can leave the last busy record until the next normal completion or session exit.
+An open revert picker is closed with one Esc, never Enter; the control plane does that after its own presses and refuses to type an exit command into it.
+Tool responses are not used as main-turn completion signals.
+Herdr identifies a Devin pane natively from its own screen-detection manifest, and interrupt and steering work there, but `exit` and therefore `relaunch` refuse on Herdr: its cursorless composer read answers `unknown` for Devin's frame.
 
-## Hook dialect
-
-Devin reuses Claude's hook schema, so the busy wiring mirrors the Claude adapter exactly, with two differences: the file is `.devin/hooks.v1.json` whose ENTIRE contents are the hooks object (no outer `"hooks"` wrapper key), and there is no `StopFailure` event.
-Devin also reads `.claude/settings.json` hooks when `read_config_from.claude` is enabled, but firstmate writes the native `.devin/hooks.v1.json` to stay independent of that toggle.
+`../../../../../bin/fm-spawn.sh` owns autonomy, trust, typed brief delivery, color preservation, and the omission of the Claude permission-mode mapping.
+`../../../../../bin/fm-devin-config.sh` owns the private user-config snapshot and appended lifecycle hooks; the user and project configs remain vendor-owned.
+The config snapshot can contain private settings and has mode 600.
 
 ## Herdr restore
 
-Herdr's Devin integration (`herdr integration install devin`) reports each session id, and after a Herdr server restart Herdr types `devin --resume <id>` into a fresh shell in the pane's saved top-level shell directory (verified with devin 3000.11.3 on Herdr 0.9.1, 2026-09-25).
+After a Herdr server restart Herdr types `devin --resume <id>` into a fresh shell in the pane's saved TOP-LEVEL shell directory (verified with devin 3000.11.3 on Herdr 0.9.1, 2026-09-25).
 When that directory is not the session's own, Devin stops on `Resume this session from which directory?`: option 1 is the session's original directory, options 2 and 3 and Escape start it in the current directory, and the listed paths are truncated on a normal-width pane.
-Firstmate therefore never answers that chooser; `../../../bin/fm-spawn.sh` creates the task pane inside its leased worktree, so the saved directory is the worktree and Devin resumes there with no chooser.
+Firstmate therefore never answers that chooser; `../../../../../bin/fm-spawn.sh` creates the task pane inside its leased worktree, so the saved directory is the worktree and Devin resumes there with no chooser.
 A worker spawned before that change still has its top-level shell in the project, so it meets the chooser on its next Herdr restore and its first option has to be chosen by hand.
-A relaunch before that first restore does not help: the pane's foreground is still the `treehouse get` subshell, already in the worktree, so `../../../bin/fm-control.sh <id> relaunch` sees the worktree, sends no `cd`, and leaves the top-level shell in the project.
-Once the chooser has been answered, a relaunch moves that shell into the worktree so later restores resume with no chooser; it refuses while the chooser still holds the composer.
+Whether a `relaunch` can move that shell afterwards is unsettled against the `relaunch` refusal recorded above, which was measured on devin 3000.11.1; re-verify both on one version before relying on either.
+`../../../../../tests/fm-devin-herdr-restore-e2e.test.sh` drives the real spawn, Treehouse, and a Herdr lab restart with a stand-in `devin` and pins that the resumed session runs in the recorded worktree.
 
-## Live verification
+## Composer and steering
 
-Hook firing, trust behaviour (none under `dangerous`), steering, interrupt, and `/exit` were verified live through tmux, and the Herdr restore behaviour above in a named Herdr lab; the dated record and what remains unverified (full Herdr supervision of a Devin worker, background shells surviving `/exit`) live in `../../../docs/verification/runtime-backends.md` "Devin".
+`../../../../../bin/fm-composer-lib.sh` owns the verified `❭` glyph, dim idle placeholder, active-turn composer, and interrupt hint.
+The shared delivery path must preserve ANSI styling: placeholder-like text surviving a styled capture remains a draft and must not be overwritten.
+The `../../../../../bin/fm-task-inbox-lib.sh` doorbell was read and acknowledged through real `fm-send` on both SWE-2 and Fusion.
+The shared slash-command settling path also handles `/quit` autocomplete.
 
-`../../../tests/fm-devin-harness.test.sh` is the portable regression: it pins ancestry detection (including that `CHISEL_SESSION_DB` is not a marker), the control-lib interrupt and exit table, the tmux/Herdr process-name classifier, the crewmate/scout-only kind gate, the `.devin/hooks.v1.json` wiring path, the `devin-hook` busy source, and the loud secondmate refusal, all with real processes and no harness.
-`../../../tests/fm-devin-herdr-restore-e2e.test.sh` drives the real spawn, Treehouse, and a Herdr lab restart with a stand-in `devin` and pins that the resumed session runs in the recorded worktree.
-A live guard in the `live-harness-optin` family is still pending: Devin is not installed as a test dependency on the CI lanes, so the live spawn check is repeated by hand after a Devin upgrade.
+## Primary integration
+
+No primary Stop guard, watcher protocol, pre-tool protection, or session-start contract was verified for Devin.
+Do not launch a primary or secondmate with this adapter.
+ACP, quota-provider integration, and native Fusion subagent accounting remain separate follow-ups.

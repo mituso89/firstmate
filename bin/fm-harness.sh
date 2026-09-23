@@ -133,14 +133,7 @@ harness_marker() {
   # identified, and any rule that must be RELIABLE under grok has to test the hook
   # markers too (see .claude/settings.json Stop entries, docs/turnend-guard.md).
   [ "${GROK_AGENT:-}" = "1" ] && { echo grok; return; }
-  # devin (Devin CLI, internal name "chisel") is detected by ANCESTRY ONLY, deliberately
-  # not by an env marker. It does export CHISEL_SESSION_DB to its tool subprocesses
-  # (verified live 2026-09-03 on devin 3000.6.12), but promoting that to a marker
-  # would misidentify a markerless crewmate (codex, opencode, kimi, muse, agy)
-  # launched from a devin primary, which inherits CHISEL_SESSION_DB - the same
-  # precedence hazard described below. The anchored ancestry match is unambiguous
-  # and was verified live, so it is the guarantee without the hazard.
-  # codex, opencode, kimi, muse, and agy publish no harness-identity marker at all, so
+  # codex, opencode, kimi, muse, agy, and devin publish no harness-identity marker at all, so
   # they are never named here and are identified by ancestry alone. That is the
   # whole reason a foreign marker must not outrank ancestry: with markers winning
   # unconditionally, any retained CLAUDECODE would silently rename one of them.
@@ -204,10 +197,6 @@ harness_process_verdict() {  # <pid>
     *codex*) echo "comm codex"; return ;;
     *opencode*) echo "comm opencode"; return ;;
     *grok*) echo "comm grok"; return ;;
-    # devin's installed launcher execs a native "devin" binary (verified live
-    # 2026-09-03, devin 3000.6.12: parent comm=devin). Anchored to the exact
-    # name so unrelated commands cannot be misread.
-    devin) echo "comm devin"; return ;;
     kimi) echo "comm kimi"; return ;;
     rovo) echo "comm rovo"; return ;;
       # muse's installed launcher ~/.local/bin/muse execs ~/.local/bin/muse-bin-<version>
@@ -239,6 +228,7 @@ harness_process_verdict() {  # <pid>
     # inherited launcher value, not an agy identity), so like muse it is
     # detected by ancestry alone.
     agy) echo "comm agy"; return ;;
+    devin) echo "comm devin"; return ;;
     node*|python*)
       # Bare interpreter: match the harness name in its script path.
       args=$(ps -o args= -p "$pid" 2>/dev/null)
@@ -473,7 +463,8 @@ secondmate_field() {
 resolve_secondmate() {
   local sm
   sm=$(secondmate_field 1)
-  if [ -z "$sm" ] || [ "$sm" = "default" ]; then resolve_crew; else echo "$sm"; fi
+  if [ -z "$sm" ] || [ "$sm" = "default" ]; then sm=$(resolve_crew); fi
+  echo "$sm"
 }
 
 # Print the optional model token (2nd field) from config/secondmate-harness, or

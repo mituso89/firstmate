@@ -453,6 +453,10 @@
       "audience": "maintainer-verification"
     },
     {
+      "path": "docs/verification/devin.md",
+      "audience": "maintainer-verification"
+    },
+    {
       "path": "docs/verification/dispatch-auth.md",
       "audience": "maintainer-verification"
     },

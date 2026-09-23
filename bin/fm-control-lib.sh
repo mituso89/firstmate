@@ -37,12 +37,10 @@
 #      stopped. A verb whose postcondition cannot be proven on the recorded
 #      backend is refused rather than performed blind.
 #
-# `resume` is deliberately NOT a verb. It is not deterministic across the
-# verified adapters: codex and grok resume only from a session id printed at
-# exit, opencode resumes the most recent session for the cwd with --continue,
-# and claude, pi, pi-signed, omp, and kimi have no verified pane-resume contract
-# at all. `relaunch` covers the same need deterministically for every adapter,
-# because the brief on disk - not a harness-private session - is the durable
+# `resume` is deliberately NOT a verb: it is not deterministic across the
+# verified adapters (docs/agent-control.md owns the per-adapter resume facts).
+# `relaunch` covers the same need deterministically for every adapter, because
+# the brief on disk - not a harness-private session - is the durable
 # instruction.
 
 # The complete control-plane verb allowlist, one per line.
@@ -91,6 +89,7 @@ fm_control_harness_family() {  # <recorded-harness>
     pi-signed) printf 'pi-signed' ;;
     omp) printf 'omp' ;;
     agy) printf 'agy' ;;
+    devin) printf 'devin' ;;
     claude*) printf 'claude' ;;
     codex*) printf 'codex' ;;
     opencode*) printf 'opencode' ;;
@@ -100,7 +99,6 @@ fm_control_harness_family() {  # <recorded-harness>
     gemini*) printf 'gemini' ;;
     muse*) printf 'muse' ;;
     rovo*) printf 'rovo' ;;
-    devin*) printf 'devin' ;;
     *) return 1 ;;
   esac
 }
@@ -129,8 +127,7 @@ fm_control_harness_supports_kind() {  # <harness> <kind>
 # with an idle composer and no repollution (verified live, agy 1.2.0 through
 # Herdr). omp (Oh My Pi) shares Pi's single Escape, empty composer
 # afterwards, and /quit exit (verified omp 18.1.2 in a PTY, re-verified 18.1.11
-# through Herdr). devin cancels on Escape too, but only on a double press (see
-# fm_control_interrupt_repeat).
+# through Herdr).
 fm_control_interrupt_key() {  # <harness>
   case "${1-}" in
     claude|codex|opencode|pi|pi-signed|omp|kimi|cursor|gemini|muse|rovo|agy|devin) printf 'Escape' ;;
@@ -139,15 +136,55 @@ fm_control_interrupt_key() {  # <harness>
   esac
 }
 
-# How many times the interrupt key must be delivered. OpenCode and Devin need a
-# double Escape (devin 3000.10.31 renders "esc twice to interrupt": one press
-# left a live turn running, two presses 0.2-0.3s apart cancelled it with an
-# empty composer, verified live through tmux); every other verified adapter
-# interrupts on a single press.
+# How many times the interrupt key must be delivered. OpenCode and Devin need a double
+# Escape; every other verified adapter interrupts on a single press.
 fm_control_interrupt_repeat() {  # <harness>
   case "${1-}" in
     opencode|devin) printf '2' ;;
     claude|codex|pi|pi-signed|omp|grok|kimi|cursor|gemini|muse|rovo|agy) printf '1' ;;
+    *) return 1 ;;
+  esac
+}
+
+# The rendered proof, read from the visible viewport between presses, that the
+# first interrupt press landed on a RUNNING turn; empty when the adapter sends
+# its presses blind. Devin needs it because the same fast double Escape that
+# cancels a running turn opens its /revert "Revert to step" picker on an idle
+# agent, where a later Enter reverts file changes. One Escape on a running turn
+# renders `esc again to interrupt` for about three seconds, while an idle agent
+# renders nothing, so the second press is sent only after that proof and never
+# sooner than fm_control_interrupt_press_gap: an unproven arm sends nothing
+# more. Verified live on devin 3000.11.1: an idle pair opened the picker at a
+# 0.05-0.1 s gap and did not at 0.15 s or more, and a running turn cancelled
+# with a 0.6 s gap.
+fm_control_interrupt_arm_signal() {  # <harness>
+  case "${1-}" in
+    devin) printf '%s' 'esc again to interrupt' ;;
+    claude|codex|opencode|pi|pi-signed|omp|grok|kimi|cursor|gemini|muse|rovo|agy) ;;
+    *) return 1 ;;
+  esac
+}
+
+# The minimum seconds between two presses of an armed interrupt: several times
+# Devin's observed idle double-tap window, well inside its three-second armed
+# window. A turn that ends between the presses therefore cannot pair them.
+fm_control_interrupt_press_gap() {  # <harness>
+  case "${1-}" in
+    devin) printf '0.5' ;;
+    claude|codex|opencode|pi|pi-signed|omp|grok|kimi|cursor|gemini|muse|rovo|agy) printf '0.2' ;;
+    *) return 1 ;;
+  esac
+}
+
+# A rendered surface that a mistimed interrupt press can open and that must be
+# dismissed with one more interrupt key before anything else is typed; empty
+# when the adapter has none. Devin's revert picker is recognized by either of
+# two independent rows, its `Revert to step:` title or its `↵ revert` footer,
+# and Escape cancels it without reverting (verified live, devin 3000.11.1).
+fm_control_interrupt_hazard_signal() {  # <harness>
+  case "${1-}" in
+    devin) printf '%s' 'Revert to step:|↵ revert' ;;
+    claude|codex|opencode|pi|pi-signed|omp|grok|kimi|cursor|gemini|muse|rovo|agy) ;;
     *) return 1 ;;
   esac
 }
@@ -162,19 +199,13 @@ fm_control_interrupt_repeat() {  # <harness>
 # follow-up` placeholder, so it needs no clear key. gemini was checked the
 # same way and also does not repollute: after a single Escape it prints
 # `Request cancelled.` and its composer shows only the `Type your message
-# or @path/to/file` placeholder. devin does not repollute either, but its
-# double Escape is a rewind-picker shortcut when the agent is already idle,
-# which the busy record cannot rule out because a cancelled turn fires no
-# hook; one more Escape closes that picker and is a no-op on the empty
-# composer a real cancel leaves (verified live on devin 3000.10.31 through
-# tmux, busy and idle). Prints the key or nothing;
+# or @path/to/file` placeholder. Prints the key or nothing;
 # a harness with no verified mechanics returns nonzero, matching the tables
 # above.
 fm_control_interrupt_clear_key() {  # <harness>
   case "${1-}" in
     muse) printf 'C-u' ;;
-    devin) printf 'Escape' ;;
-    claude|codex|opencode|pi|pi-signed|omp|grok|kimi|cursor|gemini|rovo|agy) ;;
+    claude|codex|opencode|pi|pi-signed|omp|grok|kimi|cursor|gemini|rovo|agy|devin) ;;
     *) return 1 ;;
   esac
 }
@@ -197,8 +228,8 @@ fm_control_interrupt_ack_source() {  # <harness>
 # The command that exits the agent from its own composer.
 fm_control_exit_command() {  # <harness>
   case "${1-}" in
-    claude|opencode|grok|kimi|cursor|muse|rovo|devin) printf '/exit' ;;
-    codex|pi|pi-signed|omp|gemini|agy) printf '/quit' ;;
+    claude|opencode|grok|kimi|cursor|muse|rovo) printf '/exit' ;;
+    codex|pi|pi-signed|omp|gemini|agy|devin) printf '/quit' ;;
     *) return 1 ;;
   esac
 }
@@ -334,7 +365,7 @@ fm_control_harness_wiring_paths() {  # <harness> <worktree> <state-dir> <id>
     # is written into the worktree, whose own .gemini/settings.json belongs to
     # the project, and nothing global is installed.
     gemini) printf '%s\n' "$state/$id.gemini-settings.json" ;;
-    devin) printf '%s\n' "$wt/.devin/hooks.v1.json" ;;
+    devin) printf '%s\n' "$state/$id.devin-config.json" ;;
   esac
 }
 
