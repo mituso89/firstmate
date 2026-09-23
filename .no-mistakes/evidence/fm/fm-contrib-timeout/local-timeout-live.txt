@@ -1,0 +1,11 @@
+### hanging gh (sleep 30), FM_CONTRIBUTIONS_CALL_BOUND=4, poll 1
+contributions: observation unavailable for https://github.com/elay-io/outreach-back/pull/1931
+exit=0 elapsed=4s
+1931 checked=2026-09-23T03:04:46Z error=local per-call observation timeout after 4s head=-
+wake queue:
+### poll 2 still hanging (MAX_AGE=0) - must not print a second unavailable line
+exit=0
+1931 checked=2026-09-23T03:04:50Z error=local per-call observation timeout after 4s head=-
+### poll 3 gh healthy again (MAX_AGE=0) - error must clear
+exit=0
+1931 checked=2026-09-23T03:04:54Z error=null head=218e68b9

@@ -1,0 +1,12 @@
+### base code, gh latency ~5s (real gh + 3.2s shim), poll started 03:03:13
+contributions: observation unavailable for https://github.com/elay-io/outreach-back/pull/1711
+contributions: observation unavailable for https://github.com/elay-io/outreach-back/pull/1849
+contributions: observation unavailable for https://github.com/elay-io/outreach-back/pull/1907
+contributions: observation unavailable for https://github.com/elay-io/outreach-back/pull/1924
+exit=0 elapsed=20s
+### records
+1711 checked=2026-09-23T03:03:13Z error=forge observation unavailable or changed during read head=- checks=0
+1849 checked=2026-09-23T03:03:13Z error=forge observation unavailable or changed during read head=- checks=0
+1907 checked=2026-09-23T03:03:13Z error=forge observation unavailable or changed during read head=- checks=0
+1924 checked=2026-09-23T03:03:13Z error=forge observation unavailable or changed during read head=- checks=0
+

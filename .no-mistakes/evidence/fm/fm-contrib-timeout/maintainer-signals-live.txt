@@ -1,0 +1,61 @@
+### poll 1 (real gh, cli/cli PRs with MEMBER reviews/comments)
+contribution-wake: check: contributions cli13506 9b4218b1cd8362de73aaaa788a00917006bc62ea6b8fe2185c177a5f668c2fdb
+contribution-wake: check: contributions cli13506 8dabfda2c8fd4c0246f77ba8d53839ace17e8260e0d0fd412399ddc584b119aa
+contribution-wake: check: contributions cli13506 f183ed48264371c8158ecb0809bfc95d9793691975adc52f8116ad8351f3f6c7
+contribution-wake: check: contributions cli13506 0ae469f7b45eec8cc80536a8c9935600ae5e3937aca157eb92e35f94c0d3614e
+contribution-wake: check: contributions cli13506 a2b3f747a99784bf1b3498fdcb027e7c45a877a877f2e9498908f0120188ccb8
+contribution-wake: check: contributions cli13506 cd0c8d2013c0155d8c39b05446c1ce62e26e1eddd0fe721f5cacda39d12c0e0e
+contribution-wake: check: contributions cli13506 6117ed10efa5c8ea0a87e75f4ab5bf85565ca7c4954a33488625ec0df02af1e8
+contribution-wake: check: contributions cli13506 dc83c0fa4fed7749f90bbde51674108b999dedbd78bbe30297f0c36c352c3848
+contribution-wake: check: contributions cli13506 864eaf42f02791aa74c14676975204d2db196117aaa34931f6d1d8089f70652d
+contribution-wake: check: contributions cli13899 9b73c03c9343d3298c81cbb77a7ba9bac03dfd972815f5d8687916080703acd8
+contribution-wake: check: contributions cli13899 702d59fd8a6aaed992dbe1456d691077f5064d35d59289cf2c25e25d0c030ddc
+contribution-wake: check: contributions cli13899 259c9ce60af242bf0f9ba5be99eb871f369db5a1136ff206564a6e4e18657506
+contribution-wake: check: contributions cli13899 a0a532c14a75f6adde2eadf15518cb2e13af86280706736d02e867a3b7e1c3f5
+exit=0
+### pending
+{"task":"cli13506","type":"review-comment","author":"babakks","token":"review-comment:3294172846:2026-05-24T09:09:10Z:","source":"https://github.com/cli/cli/pull/13506#discussion_r3294172846"}
+{"task":"cli13506","type":"review-comment","author":"babakks","token":"review-comment:3294175121:2026-05-24T09:11:32Z:","source":"https://github.com/cli/cli/pull/13506#discussion_r3294175121"}
+{"task":"cli13506","type":"review-comment","author":"babakks","token":"review-comment:3294176554:2026-05-24T09:12:27Z:","source":"https://github.com/cli/cli/pull/13506#discussion_r3294176554"}
+{"task":"cli13506","type":"review-comment","author":"babakks","token":"review-comment:3294177930:2026-05-24T10:30:43Z:","source":"https://github.com/cli/cli/pull/13506#discussion_r3294177930"}
+{"task":"cli13506","type":"review-comment","author":"babakks","token":"review-comment:3294190609:2026-05-24T10:30:43Z:","source":"https://github.com/cli/cli/pull/13506#discussion_r3294190609"}
+{"task":"cli13506","type":"review","author":"babakks","token":"review:4352064319:2026-05-24T09:09:10Z:COMMENTED","source":"https://github.com/cli/cli/pull/13506#pullrequestreview-4352064319"}
+{"task":"cli13506","type":"review","author":"babakks","token":"review:4352066159:2026-05-24T09:11:23Z:COMMENTED","source":"https://github.com/cli/cli/pull/13506#pullrequestreview-4352066159"}
+{"task":"cli13506","type":"review","author":"babakks","token":"review:4352067560:2026-05-24T09:12:27Z:COMMENTED","source":"https://github.com/cli/cli/pull/13506#pullrequestreview-4352067560"}
+{"task":"cli13506","type":"review","author":"babakks","token":"review:4352069212:2026-05-24T10:30:43Z:CHANGES_REQUESTED","source":"https://github.com/cli/cli/pull/13506#pullrequestreview-4352069212"}
+{"task":"cli13899","type":"comment","author":"BagToad","token":"comment:5027111857:2026-07-20T20:45:41Z:","source":"https://github.com/cli/cli/pull/13899#issuecomment-5027111857"}
+{"task":"cli13899","type":"comment","author":"BagToad","token":"comment:5495448694:2026-09-01T14:24:08Z:","source":"https://github.com/cli/cli/pull/13899#issuecomment-5495448694"}
+{"task":"cli13899","type":"comment","author":"BagToad","token":"comment:5495490258:2026-09-01T14:27:09Z:","source":"https://github.com/cli/cli/pull/13899#issuecomment-5495490258"}
+{"task":"cli13899","type":"review","author":"BagToad","token":"review:4719388403:2026-07-17T04:43:37Z:CHANGES_REQUESTED","source":"https://github.com/cli/cli/pull/13899#pullrequestreview-4719388403"}
+### wake queue
+1790132540	1	check	contribution-9b4218b1cd8362de73aaaa788a00917006bc62ea6b8fe2185c177a5f668c2fdb	check: contributions cli13506 9b4218b1cd8362de73aaaa788a00917006bc62ea6b8fe2185c177a5f668c2fdb
+1790132540	2	check	contribution-8dabfda2c8fd4c0246f77ba8d53839ace17e8260e0d0fd412399ddc584b119aa	check: contributions cli13506 8dabfda2c8fd4c0246f77ba8d53839ace17e8260e0d0fd412399ddc584b119aa
+1790132540	3	check	contribution-f183ed48264371c8158ecb0809bfc95d9793691975adc52f8116ad8351f3f6c7	check: contributions cli13506 f183ed48264371c8158ecb0809bfc95d9793691975adc52f8116ad8351f3f6c7
+1790132540	4	check	contribution-0ae469f7b45eec8cc80536a8c9935600ae5e3937aca157eb92e35f94c0d3614e	check: contributions cli13506 0ae469f7b45eec8cc80536a8c9935600ae5e3937aca157eb92e35f94c0d3614e
+1790132540	5	check	contribution-a2b3f747a99784bf1b3498fdcb027e7c45a877a877f2e9498908f0120188ccb8	check: contributions cli13506 a2b3f747a99784bf1b3498fdcb027e7c45a877a877f2e9498908f0120188ccb8
+1790132541	6	check	contribution-cd0c8d2013c0155d8c39b05446c1ce62e26e1eddd0fe721f5cacda39d12c0e0e	check: contributions cli13506 cd0c8d2013c0155d8c39b05446c1ce62e26e1eddd0fe721f5cacda39d12c0e0e
+1790132541	7	check	contribution-6117ed10efa5c8ea0a87e75f4ab5bf85565ca7c4954a33488625ec0df02af1e8	check: contributions cli13506 6117ed10efa5c8ea0a87e75f4ab5bf85565ca7c4954a33488625ec0df02af1e8
+1790132541	8	check	contribution-dc83c0fa4fed7749f90bbde51674108b999dedbd78bbe30297f0c36c352c3848	check: contributions cli13506 dc83c0fa4fed7749f90bbde51674108b999dedbd78bbe30297f0c36c352c3848
+1790132541	9	check	contribution-864eaf42f02791aa74c14676975204d2db196117aaa34931f6d1d8089f70652d	check: contributions cli13506 864eaf42f02791aa74c14676975204d2db196117aaa34931f6d1d8089f70652d
+1790132543	10	check	contribution-9b73c03c9343d3298c81cbb77a7ba9bac03dfd972815f5d8687916080703acd8	check: contributions cli13899 9b73c03c9343d3298c81cbb77a7ba9bac03dfd972815f5d8687916080703acd8
+### ack review-comment:3294172846:2026-05-24T09:09:10Z:
+exit=0
+### poll 2 (after ack - must not re-raise acked token or print new wakes)
+exit=0
+["review-comment:3294172846:2026-05-24T09:09:10Z:","review-comment:3294175121:2026-05-24T09:11:32Z:","review-comment:3294176554:2026-05-24T09:12:27Z:","review-comment:3294177930:2026-05-24T10:30:43Z:","review-comment:3294190609:2026-05-24T10:30:43Z:","review:4352064319:2026-05-24T09:09:10Z:COMMENTED","review:4352066159:2026-05-24T09:11:23Z:COMMENTED","review:4352067560:2026-05-24T09:12:27Z:COMMENTED","review:4352069212:2026-05-24T10:30:43Z:CHANGES_REQUESTED","comment:5027111857:2026-07-20T20:45:41Z:","comment:5495448694:2026-09-01T14:24:08Z:","comment:5495490258:2026-09-01T14:27:09Z:","review:4719388403:2026-07-17T04:43:37Z:CHANGES_REQUESTED"]
+### ack cli13899 review:4719388403:2026-07-17T04:43:37Z:CHANGES_REQUESTED
+fm-contributions: state directory unavailable
+exit=1
+### poll 3 (fresh re-read forced with MAX_AGE=0)
+fm-contributions: state directory unavailable
+exit=1
+### cli13899 pending after ack + re-poll:
+[]
+{"checked_at":"2026-09-23T03:02:24Z","error":null,"seen_has_acked":true}
+### ack cli13899 review:4719388403:2026-07-17T04:43:37Z:CHANGES_REQUESTED
+exit=0
+### poll 3 (fresh re-read forced with MAX_AGE=0)
+exit=0
+### cli13899 pending after ack + re-poll:
+["comment:5027111857:2026-07-20T20:45:41Z:","comment:5495448694:2026-09-01T14:24:08Z:","comment:5495490258:2026-09-01T14:27:09Z:"]
+{"checked_at":"2026-09-23T03:02:42Z","error":null}

@@ -1,0 +1,4 @@
+### Bearings over live home: new
+{"scope":"owned contributions per home","known":9,"checked":9,"counts":{"captain":1,"fleet":7,"maintainer":0,"nobody":1},"complete":true,"proven_clear":false,"unmeasured_homes":0,"unreadable_records":0,"unmeasured":0,"stale_verdicts":0,"missing_verdicts":0,"captain_omitted":0,"captain_urls":["https://github.com/elay-io/outreach-back/pull/1849"]}
+### Bearings over live home: signals
+{"scope":"owned contributions per home","known":2,"checked":2,"counts":{"captain":0,"fleet":2,"maintainer":0,"nobody":0},"complete":true,"proven_clear":true,"unmeasured_homes":0,"unreadable_records":0,"unmeasured":0,"stale_verdicts":2,"missing_verdicts":0,"captain_omitted":0,"captain_urls":[]}

@@ -1,0 +1,22 @@
+### new code, gh latency ~5s (real gh + 3.2s shim), poll started 03:03:33
+exit=0 elapsed=21s
+### records
+1711 checked=2026-09-23T03:03:33Z error=null head=68c771cf checks=15
+1849 checked=2026-09-23T03:03:33Z error=null head=7d1beea3 checks=16
+1907 checked=2026-09-23T03:03:33Z error=null head=21044a03 checks=16
+1924 checked=2026-09-23T03:03:33Z error=null head=78239fb5 checks=16
+
+### new code, ~5s gh, poll 2 started 03:04:06
+exit=0
+### new code, ~5s gh, poll 3 started 03:04:26
+exit=0
+### records after 3 polls
+1711 checked=2026-09-23T03:03:33Z error=null head=68c771cf
+1849 checked=2026-09-23T03:04:26Z error=null head=7d1beea3
+1907 checked=2026-09-23T03:04:26Z error=null head=21044a03
+1924 checked=2026-09-23T03:04:26Z error=null head=78239fb5
+1931 checked=2026-09-23T03:04:06Z error=null head=218e68b9
+1936 checked=2026-09-23T03:04:06Z error=null head=f318b9cd
+1955 checked=2026-09-23T03:04:06Z error=null head=bec890e9
+1959 checked=2026-09-23T03:04:06Z error=null head=50c2bf23
+1976 checked=2026-09-23T03:04:26Z error=null head=20777e0b
