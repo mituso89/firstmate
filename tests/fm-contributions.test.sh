@@ -139,6 +139,7 @@ case "$*" in
   'api graphql '*pullRequest*)
     jq -n --arg head "$(cat "$FORGE/head")" --arg state "$(cat "$FORGE/state" 2>/dev/null || printf open)" \
       --arg rollup "$(cat "$FORGE/rollup_head" 2>/dev/null || cat "$FORGE/head")" \
+      --arg head_ref "$(cat "$FORGE/head_ref" 2>/dev/null || cat "$FORGE/head")" \
       --slurpfile contexts "$FORGE/contexts.json" \
       --slurpfile comments "$FORGE/comments.json" --slurpfile reviews "$FORGE/reviews.json" --slurpfile inline "$FORGE/inline.json" '
       {data:{repository:{viewerPermission:"READ",
@@ -164,6 +165,8 @@ case "$*" in
                 createdAt:(.created_at // .updated_at),updatedAt:.updated_at,
                 authorAssociation:.author_association,body:.body,
                 commit:{oid:.commit_id},author:{login:.user.login}}] end)},
+          headRef:(if $head_ref == "null" then null
+            else {target:{oid:$head_ref,statusCheckRollup:{contexts:{nodes:$contexts[0]}}}} end),
           commits:{nodes:[{commit:{oid:$rollup,statusCheckRollup:{contexts:{nodes:$contexts[0]}}}}]}}}}}' ;;
   'api graphql '*)
     jq -n --slurpfile labels "$FORGE/labels.json" --slurpfile comments "$FORGE/comments.json" \
@@ -604,7 +607,8 @@ case "$fault:$*" in
   down:*) printf 'HTTP 502\n' >&2; exit 1 ;;
   hang:'api graphql '*) sleep 4 ;;
   slow:'api graphql '*) sleep "$(cat "$FORGE/delay" 2>/dev/null || echo 1)" ;;
-  head:'api graphql '*) printf '%s\n' "$(printf 'b%.0s' $(seq 40))" > "$FORGE/rollup_head" ;;
+  head:'api graphql '*) printf 'null\n' > "$FORGE/head_ref"
+    printf '%s\n' "$(printf 'b%.0s' $(seq 40))" > "$FORGE/rollup_head" ;;
 esac
 exec "$(dirname "$0")/gh-fixture" "$@"
 SH
@@ -673,8 +677,7 @@ test_call_bound_admits_slow_forge_read() {
     || fail 'the same slow read past a tighter per-call bound failed'
   [ "$out" = 'contributions: observation unavailable for https://github.com/o/r/pull/8' ] \
     || fail "a local per-call timeout did not print its unavailable line: $out"
-  jq -e '.records[0].error == "local per-call observation timeout after 5s"
-    and .records[0].timeout == true' "$home/data/delivery/contributions.json" >/dev/null \
+  jq -e '.records[0].error == "local per-call observation timeout after 5s"' "$home/data/delivery/contributions.json" >/dev/null \
     || fail 'the per-call bound did not decide the slow read outcome'
   pass 'the per-call bound admits a slow forge read and decides its timeout'
 }
@@ -690,8 +693,7 @@ test_local_timeout_is_not_a_forge_failure() {
     || fail 'a locally timed-out read failed the poll'
   [ "$out" = 'contributions: observation unavailable for https://github.com/o/r/pull/8' ] \
     || fail "a local per-call timeout did not print its unavailable line: $out"
-  jq -e '.records[0].error == "local per-call observation timeout after 1s"
-    and .records[0].timeout == true' "$home/data/delivery/contributions.json" >/dev/null \
+  jq -e '.records[0].error == "local per-call observation timeout after 1s"' "$home/data/delivery/contributions.json" >/dev/null \
     || fail 'a local per-call timeout did not record its distinct error'
   pass 'a local per-call timeout reports and wakes while naming the local bound'
 }
@@ -707,14 +709,13 @@ test_timeout_starts_an_episode_like_any_failure() {
     || fail 'the timed-out poll failed'
   [ "$out" = 'contributions: observation unavailable for https://github.com/o/r/pull/8' ] \
     || fail "a local per-call timeout did not start the episode: $out"
-  jq -e '.records[0].timeout == true' "$home/data/delivery/contributions.json" >/dev/null \
-    || fail 'a local per-call timeout did not keep its mark'
+  jq -e '.records[0].error == "local per-call observation timeout after 1s"' "$home/data/delivery/contributions.json" >/dev/null \
+    || fail 'a local per-call timeout did not record its distinct error'
   printf 'fail\n' > "$home/forge/fault"
   out=$(with_home "$home" "$ROOT/bin/fm-contributions.sh" poll) || fail 'the failing poll failed'
   [ -z "$out" ] || fail "a genuine forge failure inside the same episode re-announced: $out"
-  jq -e '.records[0].error == "forge observation unavailable or changed during read"
-    and .records[0].timeout == false' "$home/data/delivery/contributions.json" >/dev/null \
-    || fail 'a genuine failure after a timeout did not clear the timeout mark'
+  jq -e '.records[0].error == "forge observation unavailable or changed during read"' "$home/data/delivery/contributions.json" >/dev/null \
+    || fail 'a genuine failure after a timeout did not replace the timeout error'
   pass 'a local timeout starts the episode and a later forge failure stays quiet'
 }
 
@@ -804,6 +805,29 @@ test_shared_url_observed_once() {
     done
   done
   pass 'a URL owned by two tasks costs one forge call and every owner receives the result'
+}
+
+test_head_ref_rollup_outlives_commit_list() {
+  local home out
+  home=$(new_home head-ref-rollup)
+  forge_home "$home"
+  printf '%s\n' "$(printf 'b%.0s' $(seq 40))" > "$home/forge/rollup_head"
+  out=$(with_home "$home" "$ROOT/bin/fm-contributions.sh" poll) || fail 'a capped commit list poll failed'
+  [ -z "$out" ] || fail "a head ref rollup beside a capped commit list printed: $out"
+  jq -e --arg head "$HEAD_A" --slurpfile contexts "$home/forge/contexts.json" '.records[0] | .error == null
+    and .observation.head == $head and (.observation.checks | length) == ($contexts[0] | length)' \
+    "$home/data/delivery/contributions.json" >/dev/null \
+    || fail "the head ref rollup was not observed: $(cat "$home/data/delivery/contributions.json")"
+  printf 'null\n' > "$home/forge/head_ref"
+  rm "$home/forge/rollup_head"
+  mutate_record "$home" delivery '.records[0].checked_at="2026-09-15T08:00:00Z"'
+  out=$(with_home "$home" "$ROOT/bin/fm-contributions.sh" poll) || fail 'a deleted head branch poll failed'
+  [ -z "$out" ] || fail "a deleted head branch printed: $out"
+  jq -e --arg head "$HEAD_A" --slurpfile contexts "$home/forge/contexts.json" '.records[0] | .error == null
+    and .observation.head == $head and (.observation.checks | length) == ($contexts[0] | length)' \
+    "$home/data/delivery/contributions.json" >/dev/null \
+    || fail "a deleted head branch did not fall back to the latest commit rollup"
+  pass 'checks come from the head ref, and from the latest commit once the head branch is gone'
 }
 
 test_numeric_repository_name_observed() {
@@ -1041,7 +1065,7 @@ test_large_backlog_contribution_input() {
 }
 
 failures=0
-for test_name in test_actor_coverage test_stale_verdict test_unchecked_is_not_silence test_newest_check_has_no_verdict test_comment_wake test_review_wake test_inline_wake test_ready_issue_wake test_fresh_issue_requires_maintainer test_missing_lane_remains_missing test_partial_freshness_keeps_measured_rows test_malformed_record_cannot_prove_silence test_issue_timeline_and_exact_ack test_verdict_retains_judged_head test_observed_replacement_refreshes_verdict test_unobserved_head_leaves_verdict_unknown test_away_yolo_is_fleet_work test_away_yolo_cross_home_is_fleet_work test_retired_and_unsupported_coverage test_unsupported_forge_is_not_fleet_work test_held_unsupported_forge_is_not_captain_work test_shared_contribution_signal_wakes_once test_watcher_keeps_diagnostics_separate_from_contribution_wakes test_expired_child_unsupported_forge_stays_unmeasured test_watcher_surfaces_new_contribution_once test_home_summary_coverage test_unreadable_pending_is_not_empty test_budget_refusal_between_calls test_budget_bounded_call_timeout test_genuine_failure_near_deadline_is_unavailable test_call_bound_admits_slow_forge_read test_local_timeout_is_not_a_forge_failure test_timeout_starts_an_episode_like_any_failure test_invalid_call_bound_refused test_observation_costs_one_forge_call test_full_connection_window_discloses_truncation test_shared_url_observed_once test_numeric_repository_name_observed test_expected_status_is_running test_pending_review_not_observed test_pending_review_inline_comment_not_observed test_terminal_contribution_settles test_late_owner_inherits_terminal_observation test_done_task_open_pr_still_observed test_failure_wakes_once_per_episode test_late_owner_keeps_failure_episode_suppressed test_large_backlog_contribution_input; do
+for test_name in test_actor_coverage test_stale_verdict test_unchecked_is_not_silence test_newest_check_has_no_verdict test_comment_wake test_review_wake test_inline_wake test_ready_issue_wake test_fresh_issue_requires_maintainer test_missing_lane_remains_missing test_partial_freshness_keeps_measured_rows test_malformed_record_cannot_prove_silence test_issue_timeline_and_exact_ack test_verdict_retains_judged_head test_observed_replacement_refreshes_verdict test_unobserved_head_leaves_verdict_unknown test_away_yolo_is_fleet_work test_away_yolo_cross_home_is_fleet_work test_retired_and_unsupported_coverage test_unsupported_forge_is_not_fleet_work test_held_unsupported_forge_is_not_captain_work test_shared_contribution_signal_wakes_once test_watcher_keeps_diagnostics_separate_from_contribution_wakes test_expired_child_unsupported_forge_stays_unmeasured test_watcher_surfaces_new_contribution_once test_home_summary_coverage test_unreadable_pending_is_not_empty test_budget_refusal_between_calls test_budget_bounded_call_timeout test_genuine_failure_near_deadline_is_unavailable test_call_bound_admits_slow_forge_read test_local_timeout_is_not_a_forge_failure test_timeout_starts_an_episode_like_any_failure test_invalid_call_bound_refused test_observation_costs_one_forge_call test_full_connection_window_discloses_truncation test_shared_url_observed_once test_head_ref_rollup_outlives_commit_list test_numeric_repository_name_observed test_expected_status_is_running test_pending_review_not_observed test_pending_review_inline_comment_not_observed test_terminal_contribution_settles test_late_owner_inherits_terminal_observation test_done_task_open_pr_still_observed test_failure_wakes_once_per_episode test_late_owner_keeps_failure_episode_suppressed test_large_backlog_contribution_input; do
   ( "$test_name" ) || failures=$((failures + 1))
 done
 [ "$failures" -eq 0 ] || fail "$failures contribution regressions"

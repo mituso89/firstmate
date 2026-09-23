@@ -18,11 +18,12 @@
 #
 # This script owns fm-contributions.v1: one atomic file per durable task with
 # task and records[]. Each record contains url, kind, checked_at, error,
-# timeout, observation, verdict, seen event tokens, pending events, and
-# notified tokens.
-# observation is one GraphQL read per URL. Its head ref and its latest commit
-# resolve separately, so a read whose rollup commit differs from the head
-# fails rather than pairing a new head with another commit's checks. The
+# observation, verdict, seen event tokens, pending events, and notified tokens.
+# observation is one GraphQL read per URL. Checks come from the head ref's own
+# commit when it is the head; once the head branch is gone they come from the
+# latest commit, which resolves separately, so a read whose rollup commit
+# differs from the head fails rather than pairing a new head with another
+# commit's checks. The
 # viewer's unsubmitted PENDING reviews are not observed; an EXPECTED status
 # has not reported and counts as running. Checks are normalized by name, id,
 # started_at, status and conclusion; the rollup already holds the newest
@@ -48,8 +49,7 @@
 # that URL's records untouched; only a forge failure or a local timeout
 # records an error. A read killed at the per-call bound is a local timeout:
 # it is reported and woken like any other failure, while its recorded 'local
-# per-call observation timeout after <N>s' error and timeout:true mark still
-# name the local bound, so a local stall stays distinguishable from a
+# per-call observation timeout after <N>s' error still names the local bound, so a local stall stays distinguishable from a
 # forge-side failure. API failure leaves error evidence; an expired or
 # absent observation is not silence.
 # FM_CONTRIBUTIONS_MAX_AGE (default 900 seconds)
@@ -217,6 +217,11 @@ PR_QUERY='query($owner:String!,$name:String!,$number:Int!) {
       comments(last:100) { nodes { databaseId url createdAt updatedAt authorAssociation body author { login } } }
       reviews(last:100) { nodes { databaseId url submittedAt state authorAssociation body author { login } commit { oid }
         comments(last:100) { nodes { databaseId url createdAt updatedAt authorAssociation body author { login } commit { oid } } } } }
+      headRef { target { ... on Commit { oid statusCheckRollup { contexts(last:100) { nodes {
+        __typename
+        ... on CheckRun { name databaseId status conclusion startedAt }
+        ... on StatusContext { id context state createdAt }
+      } } } } } }
       commits(last:1) { nodes { commit { oid statusCheckRollup { contexts(last:100) { nodes {
         __typename
         ... on CheckRun { name databaseId status conclusion startedAt }
@@ -248,7 +253,9 @@ observe() { # canonical GitHub URL -> normalized JSON
       > "$TMP/graphql.json" || return 1
     jq -n --slurpfile g "$TMP/graphql.json" '
       ($g[0].data.repository) as $repo | ($repo.pullRequest) as $pr
-      | if ($pr.commits.nodes[0].commit.oid // null) != $pr.headRefOid then error("head moved during read") else . end
+      | (if ($pr.headRef.target.oid // null) == $pr.headRefOid then $pr.headRef.target
+          else $pr.commits.nodes[0].commit end) as $rollup
+      | if ($rollup.oid // null) != $pr.headRefOid then error("head moved during read") else . end
       | ($pr.comments.nodes | map(. + {_signal:"comment"})) as $c
       | ($pr.reviews.nodes | map(select(.state != "PENDING") | . + {_signal:"review"})) as $r
       | ([$pr.reviews.nodes[] | select(.state != "PENDING") | .comments.nodes[]] | map(. + {_signal:"review-comment"})) as $i
@@ -261,7 +268,7 @@ observe() { # canonical GitHub URL -> normalized JSON
         reviews:($r | map({id:.databaseId,state:.state,submitted_at:.submittedAt,
           commit_id:(.commit.oid // null),user:{login:(.author.login // "")},
           author_association:.authorAssociation,html_url:.url,body:.body})),
-        checks:((($pr.commits.nodes[0].commit.statusCheckRollup.contexts.nodes) // []) | map(
+        checks:((($rollup.statusCheckRollup.contexts.nodes) // []) | map(
           if .__typename == "CheckRun" then
             {name:.name,id:.databaseId,status:(.status | ascii_downcase),
              conclusion:(if .conclusion == null then null else (.conclusion | ascii_downcase) end),
@@ -274,7 +281,7 @@ observe() { # canonical GitHub URL -> normalized JSON
           (if ($pr.reviews.nodes | length) == 100 then "reviews" else empty end),
           (if any($pr.reviews.nodes[] | select(.state != "PENDING"); (.comments.nodes | length) == 100)
             then "review-comments" else empty end),
-          (if (($pr.commits.nodes[0].commit.statusCheckRollup.contexts.nodes // []) | length) == 100
+          (if (($rollup.statusCheckRollup.contexts.nodes // []) | length) == 100
             then "contexts" else empty end)]),
         events:(($c + $r + $i)
           | map(select((.author.login // "") != $pr.author.login and (.authorAssociation | IN("OWNER","MEMBER","COLLABORATOR")))
@@ -343,17 +350,17 @@ settle_final() { # canonical-url task... : copy the URL's final observation to e
       [$saved[0][] | select(.task == $task) | .records[] | select(.url == $url)] | first' > "$TMP/old.json"
     if jq -e '. == null' "$TMP/old.json" >/dev/null; then
       jq -n --slurpfile final "$TMP/final.json" '
-        $final[0] + {error:null,timeout:false,pending:[],notified:[]}' > "$TMP/row.json"
+        $final[0] + {error:null,pending:[],notified:[]}' > "$TMP/row.json"
       write_record "$task" "$TMP/row.json"
     elif jq -e '.error != null' "$TMP/old.json" >/dev/null; then
-      jq '.error = null | .timeout = false' "$TMP/old.json" > "$TMP/row.json"
+      jq '.error = null' "$TMP/old.json" > "$TMP/row.json"
       write_record "$task" "$TMP/row.json"
     fi
   done
 }
 
 poll() {
-  local task url old kind error observed timed_out
+  local task url old kind error observed
   local -a row
   acquire
   get_input
@@ -403,20 +410,17 @@ poll() {
           | ($o.events + (if $o.ready == true and $old.observation.ready != true and (any($o.events[]; .type == "ready-for-pr") | not) then
               [{token:("ready-for-pr:" + $now),type:"ready-for-pr",source:$old.url,head:null,body:"filed issue reached ready-for-pr"}]
               else [] end)) as $events
-          | $old + {checked_at:$now,error:null,timeout:false,
+          | $old + {checked_at:$now,error:null,
             observation:($o + {absent_checks:((($old.observation.absent_checks // []) + [($old.observation.checks // [])[] | .name]) - [$o.checks[].name] | unique)}),
             seen:($events | map(.token)),
             pending:(($old.pending // []) + [$events[] | select(.token as $t | ($old.seen // [] | index($t)) == null)] | unique_by(.token))}' > "$TMP/row.json"
       else
         if [ "$CALL_TIMED_OUT" -eq 1 ]; then
           error="local per-call observation timeout after ${CALL_BOUND}s"
-          timed_out=true
         else
           error='forge observation unavailable or changed during read'
-          timed_out=false
         fi
-        jq --arg now "$NOW" --arg error "$error" --argjson timeout "$timed_out" \
-          '.checked_at=$now | .error=$error | .timeout=$timeout' "$old" > "$TMP/row.json"
+        jq --arg now "$NOW" --arg error "$error" '.checked_at=$now | .error=$error' "$old" > "$TMP/row.json"
       fi
       write_record "$task" "$TMP/row.json"
       publish_pending "$task" "$url" "$TMP/row.json"
