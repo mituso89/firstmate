@@ -23,14 +23,13 @@
 # commit when it is the head; once the head branch is gone they come from the
 # latest commit, which resolves separately, so a read whose rollup commit
 # differs from the head fails rather than pairing a new head with another
-# commit's checks. The
-# viewer's unsubmitted PENDING reviews are not observed; an EXPECTED status
-# has not reported and counts as running. Checks are normalized by name, id,
-# started_at, status and conclusion; the rollup already holds the newest
-# attempt per distinct name. The last observation's lane names also disclose
-# a lane absent from the next head. Each connection reads its last 100 items;
-# observation.truncated names every window that came back full, so a partial
-# read is never presented as complete coverage.
+# commit's checks. The viewer's unsubmitted PENDING reviews are not observed;
+# an EXPECTED status has not reported and counts as running. Checks are
+# normalized by name, id, started_at, status and conclusion; the rollup
+# already holds the newest attempt per distinct name. The last observation's
+# lane names also disclose a lane absent from the next head. Each connection
+# reads its last 100 items; observation.truncated names every window that came
+# back full, so a partial read is never presented as complete coverage.
 # A verdict records the EXACT judged head, source URL, actor and summary. A
 # comment's arrival time never supplies its judged head. Record a prose verdict
 # only after its source identifies that head; otherwise leave it unbound and
@@ -49,15 +48,14 @@
 # that URL's records untouched; only a forge failure or a local timeout
 # records an error. A read killed at the per-call bound is a local timeout:
 # it is reported and woken like any other failure, while its recorded 'local
-# per-call observation timeout after <N>s' error still names the local bound, so a local stall stays distinguishable from a
-# forge-side failure. API failure leaves error evidence; an expired or
-# absent observation is not silence.
-# FM_CONTRIBUTIONS_MAX_AGE (default 900 seconds)
-# bounds freshness. A URL whose last good observation is merged or closed is
-# final: it is never re-read, stays fresh, and a stale error beside it is
-# cleared once. A genuine failure prints its unavailable line only when it
-# starts an episode (no prior owner has an error); a successful read ends the
-# episode.
+# per-call observation timeout after <N>s' error still names the local bound,
+# so a local stall stays distinguishable from a forge-side failure. API
+# failure leaves error evidence; an expired or absent observation is not
+# silence. FM_CONTRIBUTIONS_MAX_AGE (default 900 seconds) bounds freshness.
+# A URL whose last good observation is merged or closed is final: it is
+# never re-read, stays fresh, and a stale error beside it is cleared once.
+# A genuine failure prints its unavailable line only when it starts an episode
+# (no prior owner has an error); a successful read ends the episode.
 # FM_CONTRIBUTIONS_NOW supplies an ISO UTC clock for tests, otherwise UTC now.
 # FM_CONTRIBUTIONS_READY_LABEL selects the equivalent triage label, default
 # ready-for-pr. Labels are matched case-insensitively and exactly.
