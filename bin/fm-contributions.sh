@@ -19,10 +19,17 @@
 # This script owns fm-contributions.v1: one atomic file per durable task with
 # task and records[]. Each record contains url, kind, checked_at, error,
 # observation, verdict, seen event tokens, pending events, and notified tokens.
-# observation is one coherent forge read (a PR head is rechecked after fetching
-# checks/reviews). Checks are normalized by name, id, started_at, status and
-# conclusion; projection picks the newest attempt per distinct name. The last
-# observation's lane names also disclose a lane absent from the next head.
+# observation is one GraphQL read per URL. Checks come from the head ref's own
+# commit when it is the head; once the head branch is gone they come from the
+# latest commit, which resolves separately, so a read whose rollup commit
+# differs from the head fails rather than pairing a new head with another
+# commit's checks. The viewer's unsubmitted PENDING reviews are not observed;
+# an EXPECTED status has not reported and counts as running. Checks are
+# normalized by name, id, started_at, status and conclusion; the rollup
+# already holds the newest attempt per distinct name. The last observation's
+# lane names also disclose a lane absent from the next head. Each connection
+# reads its last 100 items; observation.truncated names every window that came
+# back full, so a partial read is never presented as complete coverage.
 # A verdict records the EXACT judged head, source URL, actor and summary. A
 # comment's arrival time never supplies its judged head. Record a prose verdict
 # only after its source identifies that head; otherwise leave it unbound and
@@ -32,13 +39,18 @@
 #
 # poll consumes fm-fleet-snapshot.sh --contribution-input, a local-only read,
 # and spends at most FM_CONTRIBUTIONS_BUDGET seconds on forge reads (default 20,
-# 1..25). Each gh call is bounded by the remaining budget and five seconds.
-# Oldest observations go first, so a large corpus progresses across polls.
-# Each distinct URL is observed once per poll and applied to every owner. A
-# final observation applies to every owner without another forge read. When
-# the budget runs out mid-observation, the poll ends with that URL's records
-# untouched; only a genuine forge failure or head change records an error.
-# API failure leaves error evidence; an expired or absent observation is not
+# 1..25). Each gh call is bounded by the lesser of the remaining budget and
+# FM_CONTRIBUTIONS_CALL_BOUND seconds (default 12, 1..25). Each URL costs one
+# GraphQL read. Oldest observations go first, so a large corpus progresses
+# across polls. Each distinct URL is observed once per poll and applied to
+# every owner. A final observation applies to every owner without another
+# forge read. When the budget runs out mid-observation, the poll ends with
+# that URL's records untouched; only a forge failure or a local timeout
+# records an error. A read killed at the per-call bound is a local timeout:
+# it is reported and woken like any other failure, while its recorded 'local
+# per-call observation timeout after <N>s' error still names the local bound,
+# so a local stall stays distinguishable from a forge-side failure. API
+# failure leaves error evidence; an expired or absent observation is not
 # silence. FM_CONTRIBUTIONS_MAX_AGE (default 900 seconds) bounds freshness.
 # A URL whose last good observation is merged or closed is final: it is
 # never re-read, stays fresh, and a stale error beside it is cleared once.
@@ -85,6 +97,9 @@ BUDGET=${FM_CONTRIBUTIONS_BUDGET:-20}
 case "$MAX_AGE" in ''|*[!0-9]*) fail 'invalid freshness bound' ;; esac
 case "$BUDGET" in ''|*[!0-9]*) fail 'invalid poll budget' ;; esac
 [ "$BUDGET" -ge 1 ] && [ "$BUDGET" -le 25 ] || fail 'poll budget must be 1..25 seconds'
+CALL_BOUND=${FM_CONTRIBUTIONS_CALL_BOUND:-12}
+case "$CALL_BOUND" in ''|*[!0-9]*) fail 'invalid per-call observation bound' ;; esac
+[ "$CALL_BOUND" -ge 1 ] && [ "$CALL_BOUND" -le 25 ] || fail 'per-call observation bound must be 1..25 seconds'
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/fm-contributions.XXXXXX")
 LOCK_HELD=0
 cleanup() {
@@ -180,64 +195,116 @@ forge() {
   remaining=$((DEADLINE - $(date +%s)))
   # The budget, not the forge, refused this read.
   [ "$remaining" -gt 0 ] || { BUDGET_EXHAUSTED=1; return 1; }
-  if [ "$remaining" -le 5 ]; then bounded=1; else remaining=5; fi
+  if [ "$remaining" -le "$CALL_BOUND" ]; then bounded=1; else remaining=$CALL_BOUND; fi
   fm_run_timed "$remaining" env GH_PROMPT_DISABLED=1 GH_NO_UPDATE_NOTIFIER=1 \
     gh "$@" 2> "$TMP/forge.err" || rc=$?
-  # A read killed at the budget's own deadline is budget exhaustion too.
-  [ "$rc" -ne 124 ] || [ "$bounded" -eq 0 ] || BUDGET_EXHAUSTED=1
+  # A read killed at the budget's own deadline is budget exhaustion too; one
+  # killed at the per-call bound is a local timeout, not a forge failure.
+  if [ "$rc" -eq 124 ]; then
+    if [ "$bounded" -eq 1 ]; then BUDGET_EXHAUSTED=1; else CALL_TIMED_OUT=1; fi
+  fi
   return "$rc"
 }
 
+PR_QUERY='query($owner:String!,$name:String!,$number:Int!) {
+  repository(owner:$owner,name:$name) {
+    viewerPermission
+    pullRequest(number:$number) {
+      state merged isDraft mergeable headRefOid reviewDecision url
+      author { login }
+      comments(last:100) { nodes { databaseId url createdAt updatedAt authorAssociation body author { login } } }
+      reviews(last:100) { nodes { databaseId url submittedAt state authorAssociation body author { login } commit { oid }
+        comments(last:100) { nodes { databaseId url createdAt updatedAt authorAssociation body author { login } commit { oid } } } } }
+      headRef { target { ... on Commit { oid statusCheckRollup { contexts(last:100) { nodes {
+        __typename
+        ... on CheckRun { name databaseId status conclusion startedAt }
+        ... on StatusContext { id context state createdAt }
+      } } } } } }
+      commits(last:1) { nodes { commit { oid statusCheckRollup { contexts(last:100) { nodes {
+        __typename
+        ... on CheckRun { name databaseId status conclusion startedAt }
+        ... on StatusContext { id context state createdAt }
+      } } } } } }
+    }
+  }
+}'
+
+ISSUE_QUERY='query($owner:String!,$name:String!,$number:Int!) {
+  repository(owner:$owner,name:$name) {
+    issue(number:$number) {
+      state url author { login }
+      labels(last:100) { nodes { name } }
+      comments(last:100) { nodes { databaseId url createdAt updatedAt authorAssociation body author { login } } }
+      timelineItems(last:100,itemTypes:[LABELED_EVENT]) { nodes { ... on LabeledEvent { id createdAt label { name } } } }
+    }
+  }
+}'
+
 observe() { # canonical GitHub URL -> normalized JSON
-  local url=$1 part number kind endpoint head after label
+  local url=$1 part number kind owner name label
   case "$url" in https://github.com/*) ;; *) return 1 ;; esac
   part=${url#https://github.com/}; number=${part##*/}; part=${part%/*}; kind=${part##*/}; part=${part%/*}
-  case "$kind" in pull) endpoint="repos/$part/pulls/$number" ;; issues) endpoint="repos/$part/issues/$number" ;; *) return 1 ;; esac
-  forge api "$endpoint" > "$TMP/core.json" || return 1
-  jq -e '(.state == "open" or .state == "closed") and (.user.login | type == "string")' "$TMP/core.json" >/dev/null || return 1
-  forge api "repos/$part/issues/$number/comments?per_page=100" --paginate --slurp > "$TMP/comments.json" || return 1
-  jq -e 'type == "array" and all(.[]; type == "array")' "$TMP/comments.json" >/dev/null || return 1
+  case "$kind" in pull|issues) ;; *) return 1 ;; esac
+  owner=${part%/*}; name=${part##*/}
   if [ "$kind" = pull ]; then
-    head=$(jq -er '.head.sha | select(test("^[a-fA-F0-9]{40}$"))' "$TMP/core.json") || return 1
-    forge api "$endpoint/reviews?per_page=100" --paginate --slurp > "$TMP/reviews.json" || return 1
-    forge api "$endpoint/comments?per_page=100" --paginate --slurp > "$TMP/inline.json" || return 1
-    forge api "repos/$part/commits/$head/check-runs?filter=all&per_page=100" --paginate --slurp > "$TMP/checks.json" || return 1
-    forge api "repos/$part/commits/$head/statuses?per_page=100" --paginate --slurp > "$TMP/statuses.json" || return 1
-    forge api "repos/$part" > "$TMP/repo.json" || return 1
-    forge pr view "$url" --json headRefOid,reviewDecision > "$TMP/after.json" || return 1
-    after=$(jq -er .headRefOid "$TMP/after.json")
-    [ "$head" = "$after" ] || { printf 'head changed during observation\n' > "$TMP/forge.err"; return 1; }
-    jq -n --slurpfile core "$TMP/core.json" --slurpfile comments "$TMP/comments.json" \
-      --slurpfile reviews "$TMP/reviews.json" --slurpfile inline "$TMP/inline.json" --slurpfile after "$TMP/after.json" --slurpfile checks "$TMP/checks.json" \
-      --slurpfile statuses "$TMP/statuses.json" --slurpfile repo "$TMP/repo.json" '
-      $core[0] as $c
-      | ($reviews[0] | add // []) as $reviews
-      | {head:$c.head.sha,state:(if $c.merged_at != null then "merged" else $c.state end),
-          draft:$c.draft,mergeable:(if $c.mergeable == true then "mergeable" elif $c.mergeable == false then "conflicting" else "unknown" end),
-          can_merge:($repo[0].permissions.push // false),
-          review_decision:($after[0].reviewDecision // ""),
-          reviews:$reviews,
-          checks:([ $checks[0][] | .check_runs[] | {name,id,status,conclusion,started_at} ]
-            + [ $statuses[0][] | .[] | {name:.context,id,started_at:.created_at,
-              status:(if .state == "pending" then "in_progress" else "completed" end),
-              conclusion:(if .state == "pending" then null else .state end)} ]),
-          events:((($comments[0] | add // [] | map(. + {_signal:"comment"})) + ($reviews | map(. + {_signal:"review"})) + ($inline[0] | add // [] | map(. + {_signal:"review-comment"})))
-            | map(select(.user.login != $c.user.login and (.author_association | IN("OWNER","MEMBER","COLLABORATOR")))
-              | {token:((._signal + ":") + (.id|tostring) + ":" + (.updated_at // .submitted_at // "") + ":" + (.state // "")),
-                 type:._signal,source:.html_url,head:.commit_id,
-                 author:.user.login,body:(.body // "" | .[:500])}))}' > "$TMP/observation.json" || return 1
+    forge api graphql -f query="$PR_QUERY" -f owner="$owner" -f name="$name" -F "number=$number" \
+      > "$TMP/graphql.json" || return 1
+    jq -n --slurpfile g "$TMP/graphql.json" '
+      ($g[0].data.repository) as $repo | ($repo.pullRequest) as $pr
+      | (if ($pr.headRef.target.oid // null) == $pr.headRefOid then $pr.headRef.target
+          else $pr.commits.nodes[0].commit end) as $rollup
+      | if ($rollup.oid // null) != $pr.headRefOid then error("head moved during read") else . end
+      | ($pr.comments.nodes | map(. + {_signal:"comment"})) as $c
+      | ($pr.reviews.nodes | map(select(.state != "PENDING") | . + {_signal:"review"})) as $r
+      | ([$pr.reviews.nodes[] | select(.state != "PENDING") | .comments.nodes[]] | map(. + {_signal:"review-comment"})) as $i
+      | {head:$pr.headRefOid,
+        state:(if $pr.merged then "merged" else ($pr.state | ascii_downcase) end),
+        draft:$pr.isDraft,
+        mergeable:(if $pr.mergeable == "MERGEABLE" then "mergeable" elif $pr.mergeable == "CONFLICTING" then "conflicting" else "unknown" end),
+        can_merge:($repo.viewerPermission | IN("ADMIN","MAINTAIN","WRITE")),
+        review_decision:($pr.reviewDecision // ""),
+        reviews:($r | map({id:.databaseId,state:.state,submitted_at:.submittedAt,
+          commit_id:(.commit.oid // null),user:{login:(.author.login // "")},
+          author_association:.authorAssociation,html_url:.url,body:.body})),
+        checks:((($rollup.statusCheckRollup.contexts.nodes) // []) | map(
+          if .__typename == "CheckRun" then
+            {name:.name,id:.databaseId,status:(.status | ascii_downcase),
+             conclusion:(if .conclusion == null then null else (.conclusion | ascii_downcase) end),
+             started_at:.startedAt}
+          else
+            {name:.context,id:.id,started_at:.createdAt,
+             status:(if .state | IN("PENDING","EXPECTED") then "in_progress" else "completed" end),
+             conclusion:(if .state | IN("PENDING","EXPECTED") then null else (.state | ascii_downcase) end)} end)),
+        truncated:([(if ($pr.comments.nodes | length) == 100 then "comments" else empty end),
+          (if ($pr.reviews.nodes | length) == 100 then "reviews" else empty end),
+          (if any($pr.reviews.nodes[] | select(.state != "PENDING"); (.comments.nodes | length) == 100)
+            then "review-comments" else empty end),
+          (if (($rollup.statusCheckRollup.contexts.nodes // []) | length) == 100
+            then "contexts" else empty end)]),
+        events:(($c + $r + $i)
+          | map(select((.author.login // "") != $pr.author.login and (.authorAssociation | IN("OWNER","MEMBER","COLLABORATOR")))
+            | {token:(._signal + ":" + (.databaseId | tostring) + ":"
+                + (if ._signal == "review" then (.submittedAt // "") else (.updatedAt // "") end) + ":"
+                + (if ._signal == "review" then (.state // "") else "" end)),
+               type:._signal,source:.url,head:(.commit.oid // null),
+               author:(.author.login // ""),body:(.body // "" | .[:500])}))}' > "$TMP/observation.json" 2> "$TMP/observe.err" || return 1
   else
+    forge api graphql -f query="$ISSUE_QUERY" -f owner="$owner" -f name="$name" -F "number=$number" \
+      > "$TMP/graphql.json" || return 1
     label=${FM_CONTRIBUTIONS_READY_LABEL:-ready-for-pr}
-    forge api "repos/$part/issues/$number/events?per_page=100" --paginate --slurp > "$TMP/issue-events.json" || return 1
-    jq -n --slurpfile timeline "$TMP/issue-events.json" --arg label "$label" --slurpfile core "$TMP/core.json" --slurpfile comments "$TMP/comments.json" '
-      $core[0] as $c | {state:$c.state,head:null,
-        ready:any($c.labels[]; (.name | ascii_downcase) == ($label | ascii_downcase)),
-        checks:[],reviews:[],events:($comments[0] | add // []
-          | map(select(.user.login != $c.user.login and (.author_association | IN("OWNER","MEMBER","COLLABORATOR")))
-            | {token:("comment:" + (.id|tostring) + ":" + (.updated_at // "")),type:"comment",source:.html_url,
-               head:null,author:.user.login,body:(.body // "" | .[:500])})
-          + [$timeline[0][] | .[] | select(.event == "labeled" and (.label.name | ascii_downcase) == ($label | ascii_downcase))
-             | {token:("ready-for-pr:" + (.id | tostring)),type:"ready-for-pr",source:$c.html_url,head:null,body:"filed issue reached ready-for-pr"}])}' > "$TMP/observation.json" || return 1
+    jq -n --arg label "$label" --slurpfile g "$TMP/graphql.json" '
+      ($g[0].data.repository.issue) as $i | {state:($i.state | ascii_downcase),head:null,
+        ready:any($i.labels.nodes[]; (.name | ascii_downcase) == ($label | ascii_downcase)),
+        checks:[],reviews:[],
+        truncated:([(if ($i.comments.nodes | length) == 100 then "comments" else empty end),
+          (if ($i.timelineItems.nodes | length) == 100 then "timelineItems" else empty end),
+          (if ($i.labels.nodes | length) == 100 then "labels" else empty end)]),
+        events:(($i.comments.nodes
+          | map(select((.author.login // "") != $i.author.login and (.authorAssociation | IN("OWNER","MEMBER","COLLABORATOR")))
+            | {token:("comment:" + (.databaseId | tostring) + ":" + (.updatedAt // "")),type:"comment",source:.url,
+               head:null,author:(.author.login // ""),body:(.body // "" | .[:500])}))
+          + [$i.timelineItems.nodes[] | select((.label.name | ascii_downcase) == ($label | ascii_downcase))
+             | {token:("ready-for-pr:" + .label.name + ":" + (.createdAt // "")),type:"ready-for-pr",source:$i.url,head:null,body:"filed issue reached ready-for-pr"}])}' > "$TMP/observation.json" || return 1
   fi
   jq_lib -ne --arg url "$url" --arg kind "$kind" --slurpfile observed "$TMP/observation.json" '
     {schema:"fm-contributions.v1",task:"observation",records:[{url:$url,
@@ -304,6 +371,7 @@ poll() {
     | sort_by(.at,.tasks[0],.url)[] | [.url] + .tasks | @tsv' > "$TMP/known.tsv"
   DEADLINE=$(( $(date +%s) + BUDGET ))
   BUDGET_EXHAUSTED=0
+  CALL_TIMED_OUT=0
   while IFS=$'\t' read -r -a row; do
     [ "${#row[@]}" -ge 2 ] || continue
     [ "$(date +%s)" -lt "$DEADLINE" ] || break
@@ -316,6 +384,7 @@ poll() {
       continue
     fi
     observed=0
+    CALL_TIMED_OUT=0
     observe "$url" || observed=$?
     # An observation the budget cut short is unmeasured, not unavailable: keep
     # every owner's prior record so the URL is observed first next poll.
@@ -344,7 +413,11 @@ poll() {
             seen:($events | map(.token)),
             pending:(($old.pending // []) + [$events[] | select(.token as $t | ($old.seen // [] | index($t)) == null)] | unique_by(.token))}' > "$TMP/row.json"
       else
-        error='forge observation unavailable or changed during read'
+        if [ "$CALL_TIMED_OUT" -eq 1 ]; then
+          error="local per-call observation timeout after ${CALL_BOUND}s"
+        else
+          error='forge observation unavailable or changed during read'
+        fi
         jq --arg now "$NOW" --arg error "$error" '.checked_at=$now | .error=$error' "$old" > "$TMP/row.json"
       fi
       write_record "$task" "$TMP/row.json"
