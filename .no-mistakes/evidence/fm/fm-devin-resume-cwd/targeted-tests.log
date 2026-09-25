@@ -1,0 +1,32 @@
+== fm-spawn-worktree-settle
+ok - a single transient stale pane_current_path read is not accepted as the worktree
+ok - an abort leaves a leased slot holding uncommitted work and its lease untouched
+ok - an already-settled pane is accepted on its first read
+ok - a transient primary-checkout pane read is not accepted as the worktree
+ok - a pane stuck on the primary checkout fails loudly at the deadline and returns its lease
+# all fm-spawn-worktree-settle tests passed
+exit=
+== fm-tangle-guard
+ok - fm_primary_tangle_branch: feature branch alarms; default/detached/non-git stay silent
+ok - fm-guard: bordered tangle banner fires only for a feature branch and suppresses repair commands in read-only mode
+ok - fm-bootstrap: TANGLE problem line fires only for a feature branch and suppresses repair commands in detect-only mode
+ok - fm-brief: ship brief asserts worktree isolation before the branch step
+ok - fm-spawn: aborts unless the resolved worktree is a genuine, isolated worktree
+ok - fm-spawn: appends windows by session-colon, pins the name, and targets the window id
+exit=
+== fm-devin-harness
+ok - fm-control-lib.sh: devin is a crewmate/scout adapter only
+ok - fm-control-lib.sh: devin's per-task wiring is its worktree hooks file
+ok - bin/fm-busy-lib.sh: devin's semantic busy source is devin-hook
+ok - bin/fm-agent-process-lib.sh: devin is an agent, look-alike names are not
+ok - fm-spawn.sh: devin cannot be launched as a secondmate
+ok - fm-spawn.sh: a devin spawn leaves the pane's top-level shell in its leased worktree, where Herdr resumes it
+exit=
+== fm-spawn-pool-base-freshen
+ok - an origin-less pool with a stale submodule pin refuses while naming both pins and no remedy
+ok - an unpushed submodule commit keeps the uncommitted-work refusal and survives it
+ok - work inside a submodule is still refused as uncommitted work, not called stale
+ok - a stale pin carrying real work is refused conservatively, never called stale
+ok - a stale pin beside other dirt yields the conservative refusal alone, with no stale-pin line
+# all fm-spawn-pool-base-freshen tests passed
+exit=

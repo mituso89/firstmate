@@ -1,0 +1,41 @@
+=== S1: normal spawn (tmux) ===
+warning: /tmp/fm-live.8ziL/home/data/ok1/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+🌳 Setting up worktree...
+🌳 Leased worktree at ~/.treehouse/project-e12504/1/project. Run 'treehouse return ~/.treehouse/project-e12504/1/project' to release it.
+spawned ok1 harness=sleep kind=ship mode=no-mistakes yolo=off window=firstmate:fm-ok1 worktree=/home/mitu/.treehouse/project-e12504/1/project
+[spawn exit=0]
+meta worktree=/home/mitu/.treehouse/project-e12504/1/project
+pane top-level shell pid=1320764 cwd=/home/mitu/.treehouse/project-e12504/1/project
+project=/tmp/fm-live.8ziL/project
+1     leased       ~/.treehouse/project-e12504/1/project  (held by fm-ok1)
+                   zsh (1320764), zsh (1321874), zsh (1321879), sleep (1321882)
+=== S1b: teardown returns the lease ===
+teardown: force-killing leaked worktree process(es) for ok1: 1320764
+🌳 Worktree returned to pool.
+/tmp/fm-live.8ziL/project: already current
+teardown ok1 complete (window firstmate:fm-ok1, worktree /home/mitu/.treehouse/project-e12504/1/project)
+Backlog: ok1 just finished (this home keeps no markdown backlog at /tmp/fm-live.8ziL/home/data/backlog.md). Update /tmp/fm-live.8ziL/home/data/backlog.md - move ok1 to Done, keep Done to the 10 most recent, then re-scan Queued and dispatch only work whose blockers are gone and date is due.
+[teardown exit=0]
+1     available    ~/.treehouse/project-e12504/1/project
+=== S2: clean abort (pane never arrives: default-command leaves the worktree) ===
+warning: /tmp/fm-live.8ziL/home/data/clean2/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+🌳 Setting up worktree...
+🌳 Leased worktree at ~/.treehouse/project-e12504/1/project. Run 'treehouse return ~/.treehouse/project-e12504/1/project' to release it.
+error: task clean2's endpoint did not enter its leased worktree '/home/mitu/.treehouse/project-e12504/1/project' within 60s (last seen '/tmp'; spawning project '/tmp/fm-live.8ziL/project'); inspect window firstmate:fm-clean2
+[spawn exit=1]
+ls: cannot access '/tmp/fm-live.8ziL/home/state/clean2.meta': No such file or directory
+1     available    ~/.treehouse/project-e12504/1/project
+=== S3: dirty abort (slot gains uncommitted work before freshen) ===
+warning: /tmp/fm-live.8ziL/home/data/dirty3/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+🌳 Setting up worktree...
+🌳 Leased worktree at ~/.treehouse/project-e12504/1/project. Run 'treehouse return ~/.treehouse/project-e12504/1/project' to release it.
+error: pooled worktree '/home/mitu/.treehouse/project-e12504/1/project' is not clean; refusing to discard uncommitted work while refreshing its base
+warning: task dirty3 has no task record but Treehouse lease holder fm-dirty3 still holds /home/mitu/.treehouse/project-e12504/1/project; release it with 'treehouse return /home/mitu/.treehouse/project-e12504/1/project' once nothing there needs keeping
+[spawn exit=1]
+ls: cannot access '/tmp/fm-live.8ziL/home/state/dirty3.meta': No such file or directory
+1     leased       ~/.treehouse/project-e12504/1/project  (held by fm-dirty3)
+                   bash (1365517)
+pool paths: /home/mitu/.treehouse/project-e12504/1/project
+/home/mitu/.treehouse/project-e12504/1/project/in-progress.txt => unsaved work
+=== cleanup ===
+1     available    ~/.treehouse/project-e12504/1/project
