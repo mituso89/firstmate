@@ -190,6 +190,8 @@ test_spawn_isolation_abort() {
   assert_contains "$out" "not inside a git worktree" "non-worktree spawn did not say why the path was rejected"
   assert_absent "$home/state/abort-notgit-dd4.meta" "aborted spawn must not record meta"
   assert_no_grep "return" "$TMP_ROOT/notgit-treehouse.log" "a non-isolated lease was force-returned"
+  assert_contains "$out" "lease holder fm-abort-notgit-dd4 still holds '$TMP_ROOT/spawn-notgit-root/plain'" \
+    "the isolation refusal did not name the outstanding lease holder and path"
 
   # Abort: Treehouse reports a path INSIDE the primary checkout (a subdir of PROJ_ABS).
   out=$(FM_TREEHOUSE_LOG="$TMP_ROOT/primary-treehouse.log" \
