@@ -216,7 +216,31 @@ test_primary_checkout_that_never_settles_fails_at_the_deadline() {
   pass "a pane stuck on the primary checkout fails loudly at the deadline and returns its lease"
 }
 
+# Treehouse can hand a spawn a slot whose earlier process lease lapsed over a
+# live worker's uncommitted work. The base refresh refuses it, and the abort
+# must leave that work alone: `treehouse return --force` resets what it
+# returns, so the lease stays out and the warning names its holder and path.
+test_dirty_leased_slot_is_not_force_returned() {
+  local rec id out status
+  id=settle-dirty-slot-z5
+  rec=$(make_settle_case settle-dirty-slot "$id" 0)
+  read_settle_record "$rec"
+  printf 'unsaved work\n' > "$WT_DIR/in-progress.txt"
+
+  out=$(run_settle_spawn "$id")
+  status=$?
+  [ "$status" -ne 0 ] || fail "spawn launched into a slot holding uncommitted work"$'\n'"$out"
+  assert_contains "$out" "is not clean" "spawn did not refuse the dirty slot"
+  [ ! -e "$HOME_DIR/state/$id.meta" ] || fail "refused spawn published task metadata"
+  assert_no_grep "return" "$TREEHOUSE_LOG" "the aborted spawn force-returned a slot holding uncommitted work"
+  [ "$(cat "$WT_DIR/in-progress.txt")" = "unsaved work" ] || fail "the uncommitted work in the slot was lost"
+  assert_contains "$out" "lease holder fm-$id still holds $WT_DIR" \
+    "the abort did not name the outstanding lease holder and path"
+  pass "an abort leaves a leased slot holding uncommitted work and its lease untouched"
+}
+
 test_single_stale_first_read_is_not_accepted
+test_dirty_leased_slot_is_not_force_returned
 test_already_settled_pane_is_accepted_on_its_first_read
 test_transient_primary_checkout_is_not_accepted
 test_primary_checkout_that_never_settles_fails_at_the_deadline

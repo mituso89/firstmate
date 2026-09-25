@@ -41,7 +41,7 @@ SESSION="fm-lab-devin-restore-$$"
 export HERDR_SESSION="$SESSION"
 WT=
 cleanup_all() {
-  [ -z "$WT" ] || treehouse return --force "$WT" >/dev/null 2>&1
+  [ -z "$WT" ] || (cd "$PROJ" && treehouse return --force "$WT") >/dev/null 2>&1
   herdr_safe_stop_and_delete "$SESSION"
   rm -rf "$TMP_ROOT"
 }

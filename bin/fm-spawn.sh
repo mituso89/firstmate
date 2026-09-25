@@ -1048,6 +1048,7 @@ SPAWN_TREEHOUSE_PROJECT_LOCK_HELD=0
 SPAWN_SLOT_CLAIMED=0
 SPAWN_LEASE_WT=
 SPAWN_LEASE_HELD=0
+SPAWN_LEASE_PRINT=
 RELAUNCH_REPLACEMENT_PENDING=0
 RELAUNCH_REPLACEMENT_BUSY_GEN=
 RELAUNCH_REPLACEMENT_HARNESS=
@@ -1199,18 +1200,22 @@ spawn_abort_cleanup() {
   # A durable lease, unlike a pane's process lease, never lapses on its own, so
   # a spawn that aborts before its record exists returns it. While the project
   # lock is still held, no other spawn or return can have touched the slot, the
-  # record is not yet published, and no agent has launched, so the slot holds
-  # nothing but this spawn's own setup. A later abort has already published and
-  # possibly launched, so its lease is left for the operator rather than
-  # force-returned over a launched worker.
+  # record is not yet published, and no agent has launched. Treehouse can still
+  # hand out a slot whose earlier process lease lapsed over a live worker's
+  # uncommitted work, and `return --force` resets what it returns, so the slot
+  # is returned only while it is still exactly the clean checkout this spawn
+  # leased or freshened. A later abort has already published and possibly
+  # launched, so its lease is left for the operator rather than force-returned
+  # over a launched worker.
   if [ "$SPAWN_LEASE_HELD" = 1 ] &&
     [ ! -e "$STATE/$ID.meta" ] && [ ! -L "$STATE/$ID.meta" ]; then
     SPAWN_LEASE_HELD=0
-    if [ "$SPAWN_TREEHOUSE_PROJECT_LOCK_HELD" = 1 ] &&
+    if [ "$SPAWN_TREEHOUSE_PROJECT_LOCK_HELD" = 1 ] && [ -n "$SPAWN_LEASE_PRINT" ] &&
+      [ "$(spawn_lease_print "$SPAWN_LEASE_WT" 2>/dev/null)" = "$SPAWN_LEASE_PRINT" ] &&
       (cd "$PROJ_ABS" && treehouse return --force "$SPAWN_LEASE_WT" </dev/null >/dev/null 2>&1); then
       :
     else
-      echo "warning: task $ID has no task record but still holds a Treehouse lease on $SPAWN_LEASE_WT; release it with 'treehouse return $SPAWN_LEASE_WT' once nothing there needs keeping" >&2
+      echo "warning: task $ID has no task record but Treehouse lease holder $W still holds $SPAWN_LEASE_WT; release it with 'treehouse return $SPAWN_LEASE_WT' once nothing there needs keeping" >&2
     fi
   fi
   if [ "$SPAWN_TREEHOUSE_PROJECT_LOCK_HELD" = 1 ]; then
@@ -2749,10 +2754,10 @@ spawn_worktree_isolated() { # <path>
   return 0
 }
 
-validate_spawn_worktree() { # <source> <inspect-target>
-  local source=$1 inspect_target=$2
+validate_spawn_worktree() { # <source> <inspect-target> [note]
+  local source=$1 inspect_target=$2 note=${3:-}
   if ! spawn_worktree_isolated "$WT"; then
-    echo "error: $source did not yield an isolated worktree (resolved '$WT': $SPAWN_WT_REASON; worktree root '${SPAWN_WT_TOP:-none}'; spawning project '$PROJ_ABS'); refusing to launch to avoid tangling the primary checkout. Inspect target $inspect_target" >&2
+    echo "error: $source did not yield an isolated worktree (resolved '$WT': $SPAWN_WT_REASON; worktree root '${SPAWN_WT_TOP:-none}'; spawning project '$PROJ_ABS'); refusing to launch to avoid tangling the primary checkout. Inspect target $inspect_target$note" >&2
     exit 1
   fi
 }
@@ -2774,6 +2779,17 @@ spawn_treehouse_lease() {
     echo "error: treehouse get --lease for project '$PROJ_ABS' did not report a worktree directory (output: $out); if it leased a slot, release it with 'treehouse return <path>'" >&2
     return 1
   fi
+}
+
+# Print the HEAD of a leased slot with no uncommitted or untracked changes, and
+# fail for any other slot. spawn_abort_cleanup compares it with the print taken
+# when the slot was leased or freshened, so it only ever returns a slot this
+# spawn can prove holds nothing but that clean checkout.
+spawn_lease_print() { # <worktree>
+  local status
+  status=$(git -C "$1" status --porcelain --untracked-files=all) || return 1
+  [ -z "$status" ] || return 1
+  git -C "$1" rev-parse --verify --quiet HEAD
 }
 
 # A pooled slot whose only deviation is a submodule gitlink is stale, not dirty:
@@ -3010,7 +3026,9 @@ PANE_CWD=$PROJ_ABS
 if [ "$RELAUNCH" -eq 0 ] && [ "$KIND" != secondmate ] && [ "$BACKEND" != orca ]; then
   spawn_treehouse_lease || exit 1
   WT=$SPAWN_LEASE_WT
-  validate_spawn_worktree "treehouse get --lease" "$W"
+  validate_spawn_worktree "treehouse get --lease" "$W" \
+    "; Treehouse lease holder $W still holds '$WT', which is left untouched: release it with 'treehouse return $WT' once nothing there needs keeping"
+  SPAWN_LEASE_PRINT=$(spawn_lease_print "$WT") || SPAWN_LEASE_PRINT=
   SPAWN_LEASE_HELD=1
   PANE_CWD=$WT
 fi
@@ -3606,6 +3624,7 @@ elif [ "$KIND" != secondmate ] && [ "$BACKEND" != orca ]; then
 fi
 if [ "$RELAUNCH" -eq 0 ] && [ "$KIND" != secondmate ]; then
   freshen_spawn_worktree_base "$WT" || exit 1
+  SPAWN_LEASE_PRINT=$(spawn_lease_print "$WT") || SPAWN_LEASE_PRINT=
 fi
 
 # Pre-register Claude's workspace trust for the directory this launch starts in,
