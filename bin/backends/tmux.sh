@@ -94,7 +94,8 @@ fm_backend_tmux_container_ensure() {
 #     its foreground process or directory changes, which would break name-based
 #     targeting.
 # The returned window id lets callers target the window even if its name is ever
-# lost, so worktree discovery cannot fall back to the active client's window.
+# lost, so the worktree-arrival wait cannot fall back to the active client's
+# window.
 fm_backend_tmux_create_task() {  # <session> <window-name> <cwd> -> prints window id
   local ses=$1 wname=$2 cwd=$3 wid
   if tmux list-windows -t "$ses" -F '#{window_name}' | grep -qx "$wname"; then
@@ -108,7 +109,7 @@ fm_backend_tmux_create_task() {  # <session> <window-name> <cwd> -> prints windo
 }
 
 # fm_backend_tmux_current_path: the live pane's current working directory, or
-# empty on any tmux error. Mirrors fm-spawn.sh's worktree-discovery poll:
+# empty on any tmux error. Mirrors fm-spawn.sh's worktree-arrival wait:
 # `tmux display-message -p -t "$T" '#{pane_current_path}'`.
 fm_backend_tmux_current_path() {  # <target>
   tmux display-message -p -t "$1" '#{pane_current_path}' 2>/dev/null
