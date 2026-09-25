@@ -1,0 +1,19 @@
+spawned td1 harness=devin kind=ship mode=no-mistakes yolo=off window=fm-lab-td-35484:w1:p2 worktree=/home/mitu/.treehouse/p-63a68a/3/p
+== status after spawn
+
+1     dirty        ~/.treehouse/p-63a68a/1/p
+2     leased       ~/.treehouse/p-63a68a/2/p  (held by fm-adv1)
+3     leased       ~/.treehouse/p-63a68a/3/p  (held by fm-td1)
+                   zsh (35850), sleep (36613)
+== teardown --force
+
+🌳 Worktree returned to pool.
+/tmp/fm-adv.Sh5m/p: already current
+teardown td1 complete (window fm-lab-td-35484:w1:p2, worktree /home/mitu/.treehouse/p-63a68a/3/p)
+Backlog: td1 just finished (this home keeps no markdown backlog at /tmp/fm-adv.Sh5m/home2/data/backlog.md). Update /tmp/fm-adv.Sh5m/home2/data/backlog.md - move td1 to Done, keep Done to the 10 most recent, then re-scan Queued and dispatch only work whose blockers are gone and date is due.
+teardown rc=0
+== status after teardown
+
+1     dirty        ~/.treehouse/p-63a68a/1/p
+2     leased       ~/.treehouse/p-63a68a/2/p  (held by fm-adv1)
+3     available    ~/.treehouse/p-63a68a/3/p

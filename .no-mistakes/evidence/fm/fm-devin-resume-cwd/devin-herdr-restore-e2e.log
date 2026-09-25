@@ -1,3 +1,2 @@
 ok - real herdr E2E: a spawned task pane's top-level shell sits in the recorded worktree
 ok - real herdr E2E: after a server restart Herdr resumes the Devin session inside the recorded worktree, so no directory chooser appears
-bash tests/fm-devin-herdr-restore-e2e.test.sh  0.89s user 0.32s system 17% cpu 6.835 total

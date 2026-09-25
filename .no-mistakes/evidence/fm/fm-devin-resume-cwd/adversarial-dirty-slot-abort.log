@@ -1,0 +1,24 @@
+== treehouse status before spawn
+
+1     dirty        ~/.treehouse/p-63a68a/1/p
+== spawn
+warning: /tmp/fm-adv.Sh5m/home/data/adv1/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+A new version of treehouse is available: v2.3.0 → v3.0.0
+Run "treehouse update" to update
+
+🌳 Setting up worktree...
+🌳 Leased worktree at ~/.treehouse/p-63a68a/2/p. Run 'treehouse return ~/.treehouse/p-63a68a/2/p' to release it.
+spawned adv1 harness=devin kind=ship mode=no-mistakes yolo=off window=fm-lab-adv-34023:w1:p2 worktree=/home/mitu/.treehouse/p-63a68a/2/p
+spawn rc=0
+== treehouse status after spawn
+
+1     dirty        ~/.treehouse/p-63a68a/1/p
+2     leased       ~/.treehouse/p-63a68a/2/p  (held by fm-adv1)
+                   zsh (34405), sleep (35155)
+== legacy work file still present?
+-rw-rw-r-- 1 mitu mitu 0 Sep 26 00:35 /home/mitu/.treehouse/p-63a68a/1/p/LEGACY_UNCOMMITTED_WORK
+== task record
+adv1.busy-gen
+adv1.busy-state
+adv1.meta
+home-summary.json
