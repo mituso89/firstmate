@@ -29,9 +29,17 @@ Because Devin has no marker of its own, the reverse hazard also holds: a Devin w
 Devin reuses Claude's hook schema, so the busy wiring mirrors the Claude adapter exactly, with two differences: the file is `.devin/hooks.v1.json` whose ENTIRE contents are the hooks object (no outer `"hooks"` wrapper key), and there is no `StopFailure` event.
 Devin also reads `.claude/settings.json` hooks when `read_config_from.claude` is enabled, but firstmate writes the native `.devin/hooks.v1.json` to stay independent of that toggle.
 
+## Herdr restore
+
+Herdr's Devin integration (`herdr integration install devin`) reports each session id, and after a Herdr server restart Herdr types `devin --resume <id>` into a fresh shell in the pane's saved top-level shell directory (verified with devin 3000.11.3 on Herdr 0.9.1, 2026-09-25).
+When that directory is not the session's own, Devin stops on `Resume this session from which directory?`: option 1 is the session's original directory, options 2 and 3 and Escape start it in the current directory, and the listed paths are truncated on a normal-width pane.
+Firstmate therefore never answers that chooser; `../../../bin/fm-spawn.sh` creates the task pane inside its leased worktree, so the saved directory is the worktree and Devin resumes there with no chooser.
+A worker spawned before that change still has its top-level shell in the project and meets the chooser on every restore until a relaunch moves that shell into the worktree; `../../../bin/fm-control.sh <id> relaunch` refuses while the chooser holds the composer, so its first option has to be chosen by hand before that relaunch.
+
 ## Live verification
 
-Hook firing, trust behaviour (none under `dangerous`), steering, interrupt, and `/exit` were verified live through tmux; the dated record and what remains unverified (Herdr placement, background shells surviving `/exit`) live in `../../../docs/verification/runtime-backends.md` "Devin".
+Hook firing, trust behaviour (none under `dangerous`), steering, interrupt, and `/exit` were verified live through tmux, and the Herdr restore behaviour above in a named Herdr lab; the dated record and what remains unverified (full Herdr supervision of a Devin worker, background shells surviving `/exit`) live in `../../../docs/verification/runtime-backends.md` "Devin".
 
 `../../../tests/fm-devin-harness.test.sh` is the portable regression: it pins ancestry detection (including that `CHISEL_SESSION_DB` is not a marker), the control-lib interrupt and exit table, the tmux/Herdr process-name classifier, the crewmate/scout-only kind gate, the `.devin/hooks.v1.json` wiring path, the `devin-hook` busy source, and the loud secondmate refusal, all with real processes and no harness.
+`../../../tests/fm-devin-herdr-restore-e2e.test.sh` drives the real spawn, Treehouse, and a Herdr lab restart with a stand-in `devin` and pins that the resumed session runs in the recorded worktree.
 A live guard in the `live-harness-optin` family is still pending: Devin is not installed as a test dependency on the CI lanes, so the live spawn check is repeated by hand after a Devin upgrade.
