@@ -24,8 +24,9 @@ PROJECT_MODE="$ROOT/bin/fm-project-mode.sh"
 MERGE_LOCAL="$ROOT/bin/fm-merge-local.sh"
 TMP_ROOT=$(fm_test_tmproot fm-task-delivery)
 
-# A home with one registered project, one project directory, and a fake tmux that
-# refuses, so a spawn that clears the delivery checks still creates nothing.
+# A home with one registered project, one project directory, and a fake tmux and
+# treehouse that both refuse, so a spawn that clears the delivery checks still
+# creates nothing and never leases a real slot.
 # Echoes "<home>|<project-dir>|<fakebin>".
 make_home() {  # <name> [<registry-line>...]
   local name=$1 home projects fakebin
@@ -36,7 +37,8 @@ make_home() {  # <name> [<registry-line>...]
   mkdir -p "$home/data" "$home/state" "$home/config" "$projects/proj" "$fakebin"
   git -C "$projects/proj" init -q || fail "could not initialize project fixture"
   printf '#!/bin/sh\nexit 1\n' > "$fakebin/tmux"
-  chmod +x "$fakebin/tmux"
+  printf '#!/bin/sh\nexit 1\n' > "$fakebin/treehouse"
+  chmod +x "$fakebin/tmux" "$fakebin/treehouse"
   if [ "$#" -gt 0 ]; then
     printf '%s\n' "$@" > "$home/data/projects.md"
   fi

@@ -112,3 +112,67 @@ if out=$(fm_test_run_spawn "$home" "$wt" "$fakebin" devin-sm "$proj" --secondmat
 then fail 'Devin secondmate launch accepted'; fi
 assert_contains "$out" 'crewmate/scout adapter only' 'wrong secondmate refusal'
 pass "scout launch carries Fusion, autonomy, typed brief and hooks; effort recorded only"
+
+# A Herdr restore resumes a recorded Devin session (`devin --resume <id>`) in
+# the pane's saved TOP-LEVEL shell cwd, and Devin stops on its directory chooser
+# when that is not the session's own directory (the real restore is pinned by
+# tests/fm-devin-herdr-restore-e2e.test.sh). The fake tmux here models a pane
+# whose reported cwd is its top-level shell's, which moves only on a top-level
+# `cd` or where its window was created, never into a subshell such as an
+# interactive `treehouse get`. A Devin spawn must durably lease its slot and
+# leave that top-level shell in exactly the leased worktree.
+case_dir="$TMP_ROOT/toplevel"
+id=devin-toplevel
+home="$case_dir/home"
+proj="$case_dir/project"
+wt="$case_dir/slot"
+fm_test_spawn_home "$home" devin
+fm_test_spawn_brief "$home" "$id"
+fm_git_worktree "$proj" "$wt" "slot-$id"
+fakebin=$(fm_fakebin "$case_dir/fake")
+cat > "$fakebin/tmux" <<'SH'
+#!/usr/bin/env bash
+set -u
+case "$*" in
+  *"#{pane_current_path}"*) cat "$FM_FAKE_SHELL_CWD"; exit 0 ;;
+esac
+case "${1:-}" in
+  display-message) printf 'firstmate\n'; exit 0 ;;
+  new-window)
+    prev=
+    for a in "$@"; do
+      [ "$prev" != -c ] || printf '%s\n' "$a" > "$FM_FAKE_SHELL_CWD"
+      prev=$a
+    done
+    exit 0
+    ;;
+  send-keys)
+    if [ "$#" -eq 5 ] && [ "$2" = -t ] && [ "$5" = Enter ]; then
+      printf '%s\n' "$4" >> "$FM_FAKE_TYPED_LOG"
+      case "$4" in
+        "cd -- '"*"'") path=${4#"cd -- '"}; printf '%s\n' "${path%"'"}" > "$FM_FAKE_SHELL_CWD" ;;
+      esac
+    fi
+    exit 0
+    ;;
+esac
+exit 0
+SH
+chmod +x "$fakebin/tmux"
+fm_fake_treehouse "$fakebin"
+fm_fake_exit0 "$fakebin" gh-axi gh devin
+fm_test_fake_sleep_noop "$fakebin"
+printf '%s\n' "$proj" > "$case_dir/shell-cwd"
+: > "$case_dir/typed.log"
+if ! out=$(FM_FAKE_SHELL_CWD="$case_dir/shell-cwd" FM_FAKE_TYPED_LOG="$case_dir/typed.log" \
+  FM_FAKE_TREEHOUSE_LEASE_PATH="$wt" FM_TREEHOUSE_LOG="$case_dir/treehouse.log" \
+  fm_test_run_spawn "$home" "$proj" "$fakebin" "$id" "$proj" --mode no-mistakes --yolo off 2>&1)
+then fail "a devin spawn did not bring the pane's top-level shell into its worktree: $out"; fi
+[ "$(cat "$case_dir/shell-cwd")" = "$wt" ] \
+  || fail "the pane's top-level shell ended in '$(cat "$case_dir/shell-cwd")', not the leased worktree '$wt'"
+assert_grep "worktree=$wt" "$home/state/$id.meta" 'the task record did not name the leased worktree'
+assert_grep "get --lease --lease-holder fm-$id" "$case_dir/treehouse.log" \
+  'the spawn did not durably lease its slot under its own holder'
+assert_no_grep 'treehouse get' "$case_dir/typed.log" \
+  'the spawn still typed an interactive treehouse get into the pane'
+pass "a devin spawn leaves the pane's top-level shell in its leased worktree, where Herdr resumes it"

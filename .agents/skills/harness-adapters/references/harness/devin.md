@@ -41,6 +41,14 @@ The shared delivery path must preserve ANSI styling: placeholder-like text survi
 The `../../../../../bin/fm-task-inbox-lib.sh` doorbell was read and acknowledged through real `fm-send` on both SWE-2 and Fusion.
 The shared slash-command settling path also handles `/quit` autocomplete.
 
+## Herdr restore
+
+Herdr's Devin integration (`herdr integration install devin`) reports each session id, and after a Herdr server restart Herdr types `devin --resume <id>` into a fresh shell in the pane's saved top-level shell directory (verified with devin 3000.11.3 on Herdr 0.9.1, 2026-09-25).
+When that directory is not the session's own, Devin stops on `Resume this session from which directory?`: option 1 is the session's original directory, options 2 and 3 and Escape start it in the current directory, and the listed paths are truncated on a normal-width pane.
+Firstmate therefore never answers that chooser; `../../../../../bin/fm-spawn.sh` creates the task pane inside its leased worktree, so the saved directory is the worktree and Devin resumes there with no chooser.
+A worker spawned before that change still has its top-level shell in the project and meets the chooser on every restore until a relaunch moves that shell into the worktree; `../../../../../bin/fm-control.sh <id> relaunch` refuses while the chooser holds the composer, so its first option has to be chosen by hand before that relaunch.
+`../../../../../tests/fm-devin-herdr-restore-e2e.test.sh` drives the real spawn, Treehouse, and a Herdr lab restart with a stand-in `devin` and pins that the resumed session runs in the recorded worktree; its verification record lives in `../../../../../docs/verification/devin.md`.
+
 ## Primary integration
 
 No primary Stop guard, watcher protocol, pre-tool protection, or session-start contract was verified for Devin.

@@ -112,6 +112,30 @@ Herdr names the pane from its own screen-detection manifest; with Claude hook im
 A second `fm-send` while the worker ran `sleep 40` rendered no cancellation, and both the running instruction and the queued one completed.
 `exit` on Herdr refuses for a Devin worker: the cursorless composer classifier finds the `❭` row but reads the plain rule below it as an unpaired Pi separator and answers `unknown`.
 
+## Herdr restore
+
+Measured 2026-09-25 on Linux (WSL2) with devin 3000.11.3, Herdr 0.9.1, Treehouse 2.3.0, and Herdr's own Devin integration installed, in named `bin/fm-herdr-lab.sh` sessions against a throwaway git project and Treehouse pool.
+Two panes each ran `devin --permission-mode dangerous -- 'Run the shell command pwd, then reply with only the word ready.'`: pane A created in the project and entered through an interactive `treehouse get` subshell (the former spawn shape), pane B created in a leased slot.
+Before the restart, `herdr pane get` reported pane A as `"cwd":"<project>"` with `"foreground_cwd":"<slot 2>"`, pane B as `"cwd":"<slot 1>"`, and both with `agent_session` `{"source":"herdr:devin","agent":"devin","kind":"id","value":"<session>"}`.
+`herdr pane get` `.cwd` is the top-level shell's directory: it followed a `cd` typed in that shell and ignored one typed in a nested shell or announced with an OSC 7 escape.
+After `bin/fm-herdr-lab.sh stop` and `provision`, Herdr typed `devin --resume <session>` into a fresh shell in each pane's saved `cwd`.
+Pane B resumed its conversation in the slot with no prompt.
+Pane A resumed in the project and, past Devin's folder-trust prompt for that scratch path, stopped on (scratch prefix abbreviated):
+
+```text
+Resume this session from which directory?
+❭ 1 <scratch>/…
+    Session's original directory
+  2 <scratch>/…
+    Use current directory once
+  3 <scratch>/…
+    Remember current directory
+↑↓ select · ↵ confirm · esc cancel
+```
+
+The listed paths are truncated at a 120-column pane, so the screen cannot prove which option is the task worktree.
+`tests/fm-devin-herdr-restore-e2e.test.sh` refreshes the Firstmate side of this guarantee with a stand-in `devin` and the real spawn; it passed with Treehouse 2.0.1 and 2.3.0 on Herdr 0.9.1, and failed against the previous spawn with `the task pane's top-level shell is in '<project>', not the recorded worktree '<slot>'`.
+
 ## Coverage and limits
 
 The portable regression drives ancestry evidence, rejects unrelated process names, preserves drafts, checks both delivery signals independently, exercises config preservation and generation rejection, and verifies worker-only launch plus model and effort handling.
@@ -121,4 +145,5 @@ The live guard checks main-turn completion, Claude hook isolation, commit attrib
 The shared process classifier supplies the same native identity to tmux and Herdr; Herdr interrupt, steering, and identity were exercised in a lab session, while Herdr `exit` refuses as described above.
 Zellij, Orca, and cmux were inspected through their existing backend-neutral delivery and key capability surfaces, not live-tested here.
 Orca's existing lack of Escape delivery means a Devin interrupt is refused there.
+A live guard for the Devin spawn placement is still pending, because Devin is not installed as a test dependency on the CI lanes, so that check is repeated by hand after a Devin upgrade.
 A direct keyboard cancellation bypassing `fm-control` can retain a busy record until normal completion or session exit; no primary supervision guarantee is implied by these worker hooks.
