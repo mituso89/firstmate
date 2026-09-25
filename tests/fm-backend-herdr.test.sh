@@ -614,7 +614,7 @@ test_agent_descendant_under_a_spaced_install_path_stays_alive() {
 }
 
 test_registered_agent_with_an_unreadable_process_view_is_unknown() {
-  local out
+  local out dead_pid
   out=$(stale_registration_case unreadable-exit idle 'Error: socket unavailable' 1)
   [ "$out" = "unknown unreadable refused" ] \
     || fail "a failed process-info read must not demote OR trust the registration: expected unknown/unreadable, got '$out'"
@@ -625,8 +625,13 @@ test_registered_agent_with_an_unreadable_process_view_is_unknown() {
     '{"result":{"type":"pane_process_info","process_info":{"pane_id":"w9:p9","shell_pid":4242,"foreground_process_group_id":4242,"foreground_processes":[{"pid":4242,"name":"zsh","argv0":"zsh"}]}}}')
   [ "$out" = "unknown unreadable refused" ] \
     || fail "a process view for a different pane must read unknown/unreadable, got '$out'"
+  # The shell pid must be absent from the real process table, so it is a
+  # reaped child rather than a fixed number some host process could hold.
+  sh -c ':' &
+  dead_pid=$!
+  wait "$dead_pid"
   out=$(stale_registration_case unreadable-no-foreground idle \
-    '{"result":{"type":"pane_process_info","process_info":{"pane_id":"w1:p2","shell_pid":4242,"foreground_process_group_id":4242,"foreground_processes":[]}}}')
+    "{\"result\":{\"type\":\"pane_process_info\",\"process_info\":{\"pane_id\":\"w1:p2\",\"shell_pid\":$dead_pid,\"foreground_process_group_id\":$dead_pid,\"foreground_processes\":[]}}}")
   [ "$out" = "unknown unreadable refused" ] \
     || fail "an empty foreground list must read unknown/unreadable, got '$out'"
   pass "herdr stale registration: an unreadable process view refuses instead of guessing either way"
