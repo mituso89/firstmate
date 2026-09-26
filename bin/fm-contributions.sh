@@ -32,12 +32,15 @@
 #
 # poll consumes fm-fleet-snapshot.sh --contribution-input, a local-only read,
 # and spends at most FM_CONTRIBUTIONS_BUDGET seconds on forge reads (default 20,
-# 1..25). Every read is capped at five seconds. A pull observation has three
-# dependent waves: core, six independent reads, then the closing head read;
-# an issue has two waves. Parallelizing each independent wave bounds either
-# observation to 3 * 5 = 15 seconds. poll reserves min(the configured budget,
-# 15) before starting a URL, so an in-progress normal-budget observation gets
-# all three waves and a later URL waits for the next oldest-checked-first poll.
+# 1..25). Every read is capped at FM_CONTRIBUTIONS_CALL_BOUND seconds (default
+# 12, 1..25) and by the remaining budget, so a host where one gh call takes
+# about five seconds still completes its reads instead of reporting the forge
+# unavailable. A pull observation has three dependent waves: core, six
+# independent reads, then the closing head read; an issue has two waves.
+# Parallelizing each independent wave keeps an observation to about three
+# read latencies. poll reserves min(the configured budget, 15) before starting
+# a URL, so an in-progress normal-budget observation on a typical host gets all
+# three waves and a later URL waits for the next oldest-checked-first poll.
 # A deliberately smaller configured budget remains bounded and may be
 # unmeasured, rather than being mislabeled unavailable. Each distinct URL is
 # observed once per poll and applied to every owner. A final observation applies
@@ -88,9 +91,12 @@ NOW=${FM_CONTRIBUTIONS_NOW:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
 EPOCH=$(jq -nr --arg now "$NOW" '$now | fromdateiso8601') || fail 'invalid observation clock'
 MAX_AGE=${FM_CONTRIBUTIONS_MAX_AGE:-900}
 BUDGET=${FM_CONTRIBUTIONS_BUDGET:-20}
+CALL_BOUND=${FM_CONTRIBUTIONS_CALL_BOUND:-12}
 case "$MAX_AGE" in ''|*[!0-9]*) fail 'invalid freshness bound' ;; esac
 case "$BUDGET" in ''|*[!0-9]*) fail 'invalid poll budget' ;; esac
 [ "$BUDGET" -ge 1 ] && [ "$BUDGET" -le 25 ] || fail 'poll budget must be 1..25 seconds'
+case "$CALL_BOUND" in ''|*[!0-9]*) fail 'invalid per-call observation bound' ;; esac
+[ "$CALL_BOUND" -ge 1 ] && [ "$CALL_BOUND" -le 25 ] || fail 'per-call observation bound must be 1..25 seconds'
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/fm-contributions.XXXXXX")
 LOCK_HELD=0
 cleanup() {
@@ -186,7 +192,7 @@ forge() {
   remaining=$((DEADLINE - $(date +%s)))
   # The budget, not the forge, refused this read.
   [ "$remaining" -gt 0 ] || { BUDGET_EXHAUSTED=1; : > "$TMP/budget-exhausted"; return 1; }
-  if [ "$remaining" -le 5 ]; then bounded=1; else remaining=5; fi
+  if [ "$remaining" -le "$CALL_BOUND" ]; then bounded=1; else remaining=$CALL_BOUND; fi
   fm_run_timed "$remaining" env GH_PROMPT_DISABLED=1 GH_NO_UPDATE_NOTIFIER=1 \
     gh "$@" 2> "$forge_err" || rc=$?
   # A read killed at the budget's own deadline is budget exhaustion too.
