@@ -660,7 +660,7 @@ No Herdr-specific copy of that protocol exists.
 Stopping and restarting a named Herdr server preserves workspace, tab, pane, and label ids.
 The underlying harness processes and live agent registrations do not survive.
 Each pane comes back as a fresh shell in its saved top-level shell directory, and a pane whose agent reported a native session also gets that session's resume command typed in there, such as `devin --resume <id>` (measured on Herdr 0.9.1; headless servers resume without an attached client from Herdr 0.8.0).
-Ship and scout spawns therefore create the task pane inside its leased worktree ([`bin/fm-spawn.sh`](../bin/fm-spawn.sh) header), so a restored agent resumes in its own worktree rather than the project; the Devin consequence of getting that wrong is recorded in the [verification](verification/devin.md).
+Ship and scout spawns therefore create the task pane inside its leased worktree ([`bin/fm-spawn.sh`](../bin/fm-spawn.sh) header), so a restored agent resumes in its own worktree rather than the project; the Devin consequence of getting that wrong is recorded in the [Devin verification record](verification/devin.md) "Herdr restore".
 A restored same-labeled tab with a missing pane or no registered agent is a husk.
 
 Create replaces only a confidently dead or no-agent husk, creates the replacement before closing the old tab, and refuses live or unknown states.
