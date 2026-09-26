@@ -776,7 +776,10 @@ test_six_second_reads_are_observed_not_unavailable() { # 5-12s reads fit the def
   wrap_forge "$home"
   mutate_record "$home" delivery '.records[0].checked_at="2026-09-15T08:00:00Z"'
   printf 'latency\n' > "$home/forge/fault"
-  out=$(with_home "$home" env FORGE_LATENCY=6 "$ROOT/bin/fm-contributions.sh" poll) \
+  # Three 6-second waves take 18 seconds plus process overhead, which can spill
+  # past the default 20-second poll budget; the maximum budget keeps the
+  # assertion about the per-call bound, not about budget slack.
+  out=$(with_home "$home" env FORGE_LATENCY=6 FM_CONTRIBUTIONS_BUDGET=25 "$ROOT/bin/fm-contributions.sh" poll) \
     || fail 'a 6-second-read PR observation failed'
   [ -z "$out" ] || fail "a 6-second-read PR observation was reported unavailable: $out"
   jq -e --arg now "$NOW" '.records[0] | .checked_at == $now and .error == null' \

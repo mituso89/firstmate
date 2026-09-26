@@ -124,6 +124,11 @@ done
 fm_herdr_lab_stop "$SESSION" >/dev/null 2>&1 || fail "could not stop the isolated session for the restart"
 sleep 0.5
 fm_backend_herdr_server_ensure "$SESSION" || fail "the isolated session's server did not come back up after the restart"
+# A restart is only finished once a client attaches: the CI-pinned Herdr keeps
+# restored pane terminals, and so the recorded agent resume, pending until a
+# sized foreground client shows up, as the captain's reattaching client does.
+fm_herdr_lab_viewer start "$SESSION" >/dev/null ||
+  fail "could not attach a foreground viewer to the restarted isolated session"
 
 resumed=
 for _ in $(seq 1 60); do
