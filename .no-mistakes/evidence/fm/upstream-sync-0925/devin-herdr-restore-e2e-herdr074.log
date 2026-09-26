@@ -1,0 +1,5 @@
+herdr 0.9.1
+herdr 0.7.4
+ok - real herdr E2E: a spawned task pane's top-level shell sits in the recorded worktree
+not ok - Herdr never recorded the stand-in Devin session (got 'none')
+rc=1

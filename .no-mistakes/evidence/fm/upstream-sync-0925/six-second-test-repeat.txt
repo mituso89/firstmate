@@ -1,0 +1,10 @@
+not ok - a 6-second-read PR observation was not recorded fresh under the default per-call bound
+run 1 rc=1 elapsed=20s
+ok - reads slower than five seconds are observed within the default per-call bound
+run 2 rc=0 elapsed=18s
+not ok - a 6-second-read PR observation was not recorded fresh under the default per-call bound
+run 3 rc=1 elapsed=20s
+ok - reads slower than five seconds are observed within the default per-call bound
+run 4 rc=0 elapsed=22s
+ok - reads slower than five seconds are observed within the default per-call bound
+run 5 rc=0 elapsed=18s

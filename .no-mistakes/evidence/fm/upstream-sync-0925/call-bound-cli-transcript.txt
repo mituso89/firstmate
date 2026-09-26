@@ -1,0 +1,15 @@
+### default-6s: gh latency=6s FM_CONTRIBUTIONS_CALL_BOUND=<unset, default 12> elapsed=20s rc=0
+poll output: <empty: no wake>
+record: {"checked_at":"2026-09-15T08:00:00Z","error":null}
+### bound5-6s: gh latency=6s FM_CONTRIBUTIONS_CALL_BOUND=5 elapsed=5s rc=0
+poll output: contributions: observation unavailable for https://github.com/o/r/pull/8
+record: {"checked_at":"2026-09-16T08:00:00Z","error":"forge observation unavailable or changed during read"}
+### bound0: gh latency=1s FM_CONTRIBUTIONS_CALL_BOUND=0 elapsed=0s rc=1
+poll output: fm-contributions: per-call observation bound must be 1..25 seconds
+record: {"checked_at":"2026-09-15T08:00:00Z","error":null}
+### boundabc: gh latency=1s FM_CONTRIBUTIONS_CALL_BOUND=abc elapsed=0s rc=1
+poll output: fm-contributions: invalid per-call observation bound
+record: {"checked_at":"2026-09-15T08:00:00Z","error":null}
+### bound26: gh latency=1s FM_CONTRIBUTIONS_CALL_BOUND=26 elapsed=0s rc=1
+poll output: fm-contributions: per-call observation bound must be 1..25 seconds
+record: {"checked_at":"2026-09-15T08:00:00Z","error":null}

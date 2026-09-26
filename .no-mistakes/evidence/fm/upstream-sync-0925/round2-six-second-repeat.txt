@@ -1,0 +1,12 @@
+ok - reads slower than five seconds are observed within the default per-call bound
+run 1 rc=0 elapsed=22s
+ok - reads slower than five seconds are observed within the default per-call bound
+run 2 rc=0 elapsed=22s
+ok - reads slower than five seconds are observed within the default per-call bound
+run 3 rc=0 elapsed=19s
+ok - reads slower than five seconds are observed within the default per-call bound
+run 4 rc=0 elapsed=22s
+ok - reads slower than five seconds are observed within the default per-call bound
+run 5 rc=0 elapsed=19s
+ok - reads slower than five seconds are observed within the default per-call bound
+run 6 rc=0 elapsed=22s

@@ -1,0 +1,7 @@
+config: {"default":{"harness":"devin","effort":"high"}}
+  (end of validator output)
+config: {"default":{"harness":"cursor","effort":"high"}}
+  -> CREW_DISPATCH: invalid config/crew-dispatch.json - invalid effort: cursor:high
+  (end of validator output)
+config: {"default":{"harness":"devin","effort":"bogus"}}
+  (end of validator output)

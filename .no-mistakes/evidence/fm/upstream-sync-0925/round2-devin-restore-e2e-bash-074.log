@@ -1,0 +1,5 @@
+SHELL=/bin/bash (CI-like login shell, skips local zsh/pyenv init)
+herdr 0.7.4
+ok - real herdr E2E: a spawned task pane's top-level shell sits in the recorded worktree
+ok - real herdr E2E: after a server restart Herdr resumes the Devin session inside the recorded worktree, so no directory chooser appears
+rc=0
