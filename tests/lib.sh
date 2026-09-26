@@ -360,6 +360,36 @@ SH
   done
 }
 
+# fm_fake_treehouse <fakebin> [lease-path]
+# A treehouse stand-in for spawns: `get --lease` prints only the leased path, as
+# real Treehouse does. The path is <lease-path> when given, otherwise
+# FM_FAKE_TREEHOUSE_LEASE_PATH, otherwise FM_FAKE_PANE_PATH; the call exits
+# FM_FAKE_TREEHOUSE_GET_RC (default 0). Every call's argv is appended to
+# FM_TREEHOUSE_LOG. Every other subcommand exits 0.
+fm_fake_treehouse() {
+  local fakebin=$1 lease_path=${2:-}
+  cat > "$fakebin/treehouse" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "${FM_TREEHOUSE_LOG:-/dev/null}"
+if [ "${1:-}" = get ]; then
+  case " $* " in
+    *" --lease "*)
+      rc=${FM_FAKE_TREEHOUSE_GET_RC:-0}
+      [ "$rc" = 0 ] || exit "$rc"
+      printf '%s\n' "${FM_FAKE_TREEHOUSE_FIXED_LEASE_PATH:-${FM_FAKE_TREEHOUSE_LEASE_PATH:-${FM_FAKE_PANE_PATH:-}}}"
+      ;;
+  esac
+fi
+exit 0
+SH
+  if [ -n "$lease_path" ]; then
+    { printf '#!/usr/bin/env bash\nexport FM_FAKE_TREEHOUSE_FIXED_LEASE_PATH=%q\n' "$lease_path"
+      tail -n +2 "$fakebin/treehouse"; } > "$fakebin/treehouse.tmp" &&
+      mv "$fakebin/treehouse.tmp" "$fakebin/treehouse"
+  fi
+  chmod +x "$fakebin/treehouse"
+}
+
 # fm_fake_crash_injector <fakebin>
 # Drops an `fm-crash-inject <pid>` shim that a PATH fake calls to simulate a
 # hard crash of the process under test. It SIGKILLs <pid> and then returns only

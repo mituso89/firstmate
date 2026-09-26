@@ -898,10 +898,38 @@ A cancelled turn fires no hook, so the busy record stays `busy`, the same as Cla
 With that sequence `bin/fm-control.sh <id> interrupt` cancelled a thinking turn and was a no-op on an idle one, and `bin/fm-control.sh <id> exit` printed `stopped ... harness=devin backend=tmux` and returned the pane to its shell.
 The empty composer renders `❭` followed by a grey (RGB 124) placeholder that ghost stripping removes; typed text classified `pending` and Ctrl-U returned it to `empty`.
 
+### Herdr restore
+
+Measured 2026-09-25 on Linux (WSL2) with devin 3000.11.3, Herdr 0.9.1, Treehouse 2.3.0, and Herdr's own Devin integration installed, in named `bin/fm-herdr-lab.sh` sessions against a throwaway git project and Treehouse pool.
+Two panes each ran `devin --permission-mode dangerous -- 'Run the shell command pwd, then reply with only the word ready.'`: pane A created in the project and entered through an interactive `treehouse get` subshell (the former spawn shape), pane B created in a leased slot.
+Before the restart, `herdr pane get` reported pane A as `"cwd":"<project>"` with `"foreground_cwd":"<slot 2>"`, pane B as `"cwd":"<slot 1>"`, and both with `agent_session` `{"source":"herdr:devin","agent":"devin","kind":"id","value":"<session>"}`.
+`herdr pane get` `.cwd` is the top-level shell's directory: it followed a `cd` typed in that shell and ignored one typed in a nested shell or announced with an OSC 7 escape.
+After `bin/fm-herdr-lab.sh stop` and `provision`, Herdr typed `devin --resume <session>` into a fresh shell in each pane's saved `cwd`.
+Pane B resumed its conversation in the slot with no prompt.
+Pane A resumed in the project and, past Devin's folder-trust prompt for that scratch path, stopped on (scratch prefix abbreviated):
+
+```text
+Resume this session from which directory?
+❭ 1 <scratch>/…
+    Session's original directory
+  2 <scratch>/…
+    Use current directory once
+  3 <scratch>/…
+    Remember current directory
+↑↓ select · ↵ confirm · esc cancel
+```
+
+The listed paths are truncated at a 120-column pane, so the screen cannot prove which option is the task worktree.
+`tests/fm-devin-herdr-restore-e2e.test.sh` refreshes the Firstmate side of this guarantee with a stand-in `devin` and the real spawn; it passed with Treehouse 2.0.1 and 2.3.0 on Herdr 0.9.1, and failed against the previous spawn with `the task pane's top-level shell is in '<project>', not the recorded worktree '<slot>'`.
+Its pane-placement assertion - the one the spawn fix is responsible for - runs on every supported release, including the required lane's Herdr 0.7.4 pin.
+Its restart assertions are gated to Herdr 0.8.0 and later, because a headless pre-0.8.0 server resumes nothing to place.
+On the required lane's pinned 0.7.4 the pane's `agent_session` was recorded normally and the restart then typed no resume command at all, failing with `Herdr did not resume the recorded Devin session after the restart` over an empty pane (2026-09-25, CI job 108181849264).
+A local 0.7.4 client cannot refresh that observation: with a 0.9.1 server daemon already serving the lab session, `herdr status --json` reports `"compatible":false` and the stand-in's `pane report-agent-session` never lands, so the run stops at `Herdr never recorded the stand-in Devin session` before reaching any restart assertion.
+
 ### Not verified
 
 Devin as a PRIMARY or SECONDMATE runtime is unverified and refused: `bin/fm-supervision-instructions.sh --harness devin` falls back to the unknown-harness mode, and `bin/fm-spawn.sh <id> --secondmate devin` refuses.
-Herdr placement of a Devin worker was not exercised; its process-level liveness relies on the same anchored `devin` process name the tmux probe reads.
+Full Herdr supervision of a Devin worker (busy, steering, and control through a Herdr endpoint) was not exercised; its process-level liveness relies on the same anchored `devin` process name the tmux probe reads.
 Background shells a Devin turn started (Devin moves a long foreground command into a background shell after about ten seconds) survived `/exit` and had to be stopped by PID.
 
 ## Herdr
@@ -936,7 +964,7 @@ The CLI matrix was checked directly:
 | Keys | `herdr pane send-keys <pane> enter|escape|ctrl+c --session <name>` | Enter and Escape worked; Ctrl-C interrupted foreground work. |
 | Capture | `herdr pane read <pane> --source recent --lines N` | Small N could return empty below viewport height; a 200-line request plus local trim was stable. |
 | Native state | `herdr agent get <pane>` | Working and done transitions were visible on some harnesses; live Claude Code 2.1.236 on Herdr 0.8.0 kept `agent_status=idle` for an entire landed turn, including a multi-second tool call, so submit confirmation falls through to the shared composer verdict. Native `busy` remains positive activity evidence, while native `idle` cannot close a turn and the adapter's semantic lifecycle decides worker state. |
-| Restart | guarded named-session stop then start | Workspace, tab, pane, and labels persisted; the agent process and registration did not. |
+| Restart | guarded named-session stop then start | Workspace, tab, pane, and labels persisted; the agent process and registration did not. On Herdr 0.9.1 a pane with a recorded native agent session also had its resume command typed into a fresh shell in the saved top-level shell directory (Devin "Herdr restore"). |
 | Close | `herdr pane close <pane> --session <name>` | The exact one-pane task tab closed; closing a final tab could remove the workspace. |
 
 All destructive verification used `bin/fm-herdr-lab.sh` with a non-default `fm-lab-` name and a byte-identical default-session tripwire.
