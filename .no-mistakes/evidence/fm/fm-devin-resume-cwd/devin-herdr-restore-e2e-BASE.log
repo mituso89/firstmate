@@ -1,4 +1,4 @@
-not ok - the task pane's top-level shell is in '/tmp/fm-devin-restore.yiSIVB/project', not the recorded worktree '/home/mitu/.treehouse/project-b60e01/1/project'
-base: pre-restart top-level shell cwd = /tmp/fm-devin-restore.l4kDlI/project
-ok - real herdr E2E: a spawned task pane's top-level shell sits in the recorded worktree
-not ok - the restored Devin session resumed as 'fm-e2e-resume /tmp/fm-devin-restore.l4kDlI/project', expected 'fm-e2e-resume /home/mitu/.treehouse/project-9fd266/1/project' (the recorded worktree, never the project '/tmp/fm-devin-restore.l4kDlI/project')
+# same E2E test run against base commit 8aa8fbe bin/ (before the fix)
+$ ZDOTDIR=$Z bash <base>/tests/fm-devin-herdr-restore-e2e.test.sh
+not ok - the task pane's top-level shell is in '/tmp/fm-devin-restore.iJEeHW/project', not the recorded worktree '/home/mitu/.treehouse/project-17cdad/1/project'
+exit=1

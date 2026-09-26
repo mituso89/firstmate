@@ -1,2 +1,6 @@
+# host note: ~/.pyenv/shims/.pyenv-shim is a stale lock that hangs zsh startup, so pane zsh ran with ZDOTDIR=<tmp dir holding an empty .zshrc>
+$ herdr --version: herdr 0.9.1; treehouse v2.3.0
+$ ZDOTDIR=$Z bash tests/fm-devin-herdr-restore-e2e.test.sh
 ok - real herdr E2E: a spawned task pane's top-level shell sits in the recorded worktree
 ok - real herdr E2E: after a server restart Herdr resumes the Devin session inside the recorded worktree, so no directory chooser appears
+exit=0

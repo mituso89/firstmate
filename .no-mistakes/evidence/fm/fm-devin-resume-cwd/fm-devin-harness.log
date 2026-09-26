@@ -1,0 +1,10 @@
+ok - fm-harness.sh: ancestry detects a natively-named devin command
+ok - fm-harness.sh: ancestry rejects unrelated devin mentions
+ok - fm-harness.sh: CHISEL_SESSION_DB is not promoted to a detection marker
+ok - fm-control-lib.sh: devin carries its verified interrupt and exit mechanics
+ok - fm-control-lib.sh: devin is a crewmate/scout adapter only
+ok - fm-control-lib.sh: devin's per-task wiring is its worktree hooks file
+ok - bin/fm-busy-lib.sh: devin's semantic busy source is devin-hook
+ok - bin/fm-agent-process-lib.sh: devin is an agent, look-alike names are not
+ok - fm-spawn.sh: devin cannot be launched as a secondmate
+ok - fm-spawn.sh: a devin spawn leaves the pane's top-level shell in its leased worktree, where Herdr resumes it
