@@ -1060,10 +1060,6 @@ Resume this session from which directory?
 The listed paths are truncated at a 120-column pane, so the screen cannot prove which option is the task worktree.
 `tests/fm-devin-herdr-restore-e2e.test.sh` refreshes the Firstmate side of this guarantee with a stand-in `devin` and the real spawn; it passed with Treehouse 2.0.1 and 2.3.0 on Herdr 0.9.1, and failed against the previous spawn with `the task pane's top-level shell is in '<project>', not the recorded worktree '<slot>'`.
 
-### Not verified here
-
-Full Herdr supervision of a Devin worker (busy, steering, and control through a Herdr endpoint) was not exercised; its process-level liveness relies on the same anchored `devin` process name the tmux probe reads.
-
 ## Herdr
 
 The compatibility floor is protocol 14.
