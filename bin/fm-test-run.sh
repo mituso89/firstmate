@@ -721,7 +721,6 @@ tests/fm-cursor-harness.test.sh 30212
 tests/fm-cursor-primary-live-e2e.test.sh 72
 tests/fm-cursor-primary.test.sh 52269
 tests/fm-daemon.test.sh 27262
-tests/fm-devin-harness.test.sh 415
 tests/fm-dispatch-resolve.test.sh 4397
 tests/fm-documentation-audiences.test.sh 847
 tests/fm-dod-lib.test.sh 4000
@@ -740,7 +739,6 @@ tests/fm-harness-adapter-instructions-live-e2e.test.sh 48
 tests/fm-harness-adapter-references.test.sh 83
 tests/fm-harness-liveness-drift-live-e2e.test.sh 881
 tests/fm-harness-precedence.test.sh 3661
-tests/fm-herdr-attached-viewer-live-e2e.test.sh 19000
 tests/fm-herdr-pi-stale-registration-live-e2e.test.sh 47
 tests/fm-herdr-session-cleanup.test.sh 6828
 tests/fm-herdr-submit-confirm-live-e2e.test.sh 46

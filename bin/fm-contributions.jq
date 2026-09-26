@@ -18,7 +18,6 @@ def valid_record:
     and (.observation == null or (.kind as $kind | .observation |
       (.state | IN("open","closed","merged")) and (.checks | type == "array")
       and (.reviews | type == "array") and (.events | type == "array")
-      and ((.truncated // []) | type == "array")
       and all(.checks[]; (.name | type == "string" and length > 0)
         and (.status | type == "string") and (.conclusion == null or (.conclusion | type == "string")))
       and (if $kind == "pr" then (.head | sha) and (.draft | type == "boolean")
