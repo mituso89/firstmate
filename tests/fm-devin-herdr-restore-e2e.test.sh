@@ -18,6 +18,10 @@
 # and the resumed `devin --resume <id>` both run in the task's recorded
 # worktree, never the project.
 #
+# The pane-placement half runs on every supported release; the restart half is
+# gated to herdr 0.8.0+, which is where a recorded agent session is resumed with
+# no client attached. See the gate below for why.
+#
 # Safety (tests/herdr-test-safety.sh): every Herdr lifecycle call goes through
 # bin/fm-herdr-lab.sh against this test's own session; the live `default`
 # session is never touched.
@@ -112,6 +116,30 @@ real_or_raw() { (cd "$1" 2>/dev/null && pwd -P) || printf '%s\n' "$1"; }
 [ "$(real_or_raw "$(pane_cwd)")" = "$WT_REAL" ] ||
   fail "the task pane's top-level shell is in '$(pane_cwd)', not the recorded worktree '$WT'"
 pass "real herdr E2E: a spawned task pane's top-level shell sits in the recorded worktree"
+
+# The placement this regression exists for is proven above on every supported
+# release. Typing a recorded agent session back into a restored pane with no
+# client attached is a separate Herdr capability that only 0.8.0 and later have:
+# 0.7.4 - the required lane's pin (bin/fm-install-herdr.sh) - records the session
+# but never resumes it headlessly, so the rest of this script would assert a
+# capability the pin does not have. The client release is the gate because the
+# required lane installs one pinned binary that serves as both client and lab
+# server; where a newer server daemon already owns the session instead, the
+# mismatch surfaces earlier as an unrecorded agent session (see
+# docs/verification/devin.md "Herdr restore").
+HERDR_CLIENT_VERSION=$(herdr status --json 2>/dev/null | jq -r '.client.version // empty')
+fm_backend_herdr_version_at_least "$HERDR_CLIENT_VERSION" 0.8.0 \
+  && RESTORE_SUPPORTED=0 || RESTORE_SUPPORTED=$?
+case "$RESTORE_SUPPORTED" in
+  0) ;;
+  1)
+    echo "skip: herdr $HERDR_CLIENT_VERSION predates headless agent-session restore (needs 0.8.0+)"
+    exit 0
+    ;;
+  *)
+    fail "could not parse a herdr client version ('${HERDR_CLIENT_VERSION:-none}') to decide agent-session restore support"
+    ;;
+esac
 
 reported=
 for _ in $(seq 1 40); do

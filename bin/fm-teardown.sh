@@ -3525,10 +3525,11 @@ else
 fi
 
 # Correlate a projected endpoint with its presentation journal while the
-# endpoint is still intact: the leaked-process reap and the worktree return
-# below both end every process in the worktree, and a task pane's own
-# top-level shell starts there (bin/fm-spawn.sh), so either can already remove
-# the projected pane and its workspace.
+# endpoint is still intact, before the focus-preserving close below and before
+# the leaked-process reap and worktree return after it: those two both end every
+# process in the worktree, and a task pane's own top-level shell starts there
+# (bin/fm-spawn.sh), so either would otherwise remove the projected pane and its
+# workspace outside the one path that restores focus.
 HERDR_PRESENTATION_JOURNAL="$STATE/$ID.herdr-presentation"
 HERDR_PRESENTATION_RETIRE_CANDIDATE=0
 HERDR_PRESENTATION_SESSION=
@@ -3547,6 +3548,36 @@ if [ "$BACKEND" = herdr ] \
        "$HERDR_PRESENTATION_SESSION" "$HERDR_PRESENTATION_WORKSPACE" \
        "$HERDR_PRESENTATION_JOURNAL" "$ID"; then
     HERDR_PRESENTATION_RETIRE_CANDIDATE=1
+  fi
+fi
+
+# Close the exact projected task pane here, still ahead of that reap and return,
+# because this helper is the only path that restores the captain's exact active
+# workspace and tab. Letting the reap or the return end the pane's own top-level
+# shell first hands the removal to Herdr's pane-death path, which drops the
+# last-tab projected workspace and leaves the active workspace and tab somewhere
+# else with nothing left to restore them (reproduced on the required lane's
+# herdr 0.7.4 pin; tests/fm-backend-herdr-presentation-e2e.test.sh asserts the
+# captain's focus across this teardown). The named-session presentation lock
+# acquired above already covers this call.
+if [ "$HERDR_PRESENTATION_RETIRE_CANDIDATE" = 1 ]; then
+  if [ "$(fm_backend_herdr_pane_presence_state "$HERDR_PRESENTATION_SESSION" "$HERDR_PRESENTATION_PANE")" = dead ]; then
+    # An agent that already exited on its own leaves no pane to close, and that
+    # gone state is what the retirement check further below confirms.
+    :
+  elif teardown_herdr_session_lock_held "$HERDR_PRESENTATION_SESSION"; then
+    # stderr is deliberately NOT discarded here. This is the highest-frequency
+    # projected-close call site, and the helper's only stderr output is a real
+    # warning - unverifiable workspace.move support, a refused focus-unsafe
+    # close, an unconfirmed repositioned-workspace removal, or a failed exact
+    # restore.
+    # Swallowing them left a wrong active workspace with no operator-visible
+    # signal at all. The close stays non-fatal exactly as before: the presence
+    # gate below is what decides whether any durable record may be removed.
+    fm_backend_herdr_projection_close_pane_focus_preserving \
+      "$HERDR_PRESENTATION_SESSION" "$HERDR_PRESENTATION_PANE" || true
+  else
+    echo "warning: herdr presentation focus lock unavailable; refusing a concurrent focus-unsafe pane close" >&2
   fi
 fi
 
@@ -3622,26 +3653,9 @@ elif [ -d "$WT" ] && [ "$KIND" != secondmate ]; then
 fi
 
 if [ "$HERDR_PRESENTATION_RETIRE_CANDIDATE" = 1 ]; then
-  # The presentation lock was acquired before the worktree return above; a
-  # contended lock already refused this teardown while everything was intact.
-  # A pane the reap or return already ended needs no close, and its gone state
-  # is what the retirement check below confirms.
-  if [ "$(fm_backend_herdr_pane_presence_state "$HERDR_PRESENTATION_SESSION" "$HERDR_PRESENTATION_PANE")" = dead ]; then
-    :
-  elif teardown_herdr_session_lock_held "$HERDR_PRESENTATION_SESSION"; then
-    # stderr is deliberately NOT discarded here. This is the highest-frequency
-    # projected-close call site, and the helper's only stderr output is a real
-    # warning - unverifiable workspace.move support, a refused focus-unsafe
-    # close, an unconfirmed repositioned-workspace removal, or a failed exact
-    # restore.
-    # Swallowing them left a wrong active workspace with no operator-visible
-    # signal at all. The close stays non-fatal exactly as before: the presence
-    # gate below is what decides whether any durable record may be removed.
-    fm_backend_herdr_projection_close_pane_focus_preserving \
-      "$HERDR_PRESENTATION_SESSION" "$HERDR_PRESENTATION_PANE" || true
-  else
-    echo "warning: herdr presentation focus lock unavailable; refusing a concurrent focus-unsafe pane close" >&2
-  fi
+  # Already closed above, ahead of the reap and the worktree return, so the
+  # focus-preserving path owned the removal while the pane was still alive.
+  :
 elif [ "$BACKEND" = herdr ]; then
   if teardown_herdr_session_lock_held "$TEARDOWN_HERDR_SESSION"; then
     fm_backend_herdr_kill_serialized "$TEARDOWN_HERDR_SESSION" "$TEARDOWN_HERDR_PANE" 2>/dev/null || true
