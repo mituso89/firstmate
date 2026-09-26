@@ -921,6 +921,10 @@ Resume this session from which directory?
 
 The listed paths are truncated at a 120-column pane, so the screen cannot prove which option is the task worktree.
 `tests/fm-devin-herdr-restore-e2e.test.sh` refreshes the Firstmate side of this guarantee with a stand-in `devin` and the real spawn; it passed with Treehouse 2.0.1 and 2.3.0 on Herdr 0.9.1, and failed against the previous spawn with `the task pane's top-level shell is in '<project>', not the recorded worktree '<slot>'`.
+Its pane-placement assertion - the one the spawn fix is responsible for - runs on every supported release, including the required lane's Herdr 0.7.4 pin.
+Its restart assertions are gated to Herdr 0.8.0 and later, because a headless pre-0.8.0 server resumes nothing to place.
+On the required lane's pinned 0.7.4 the pane's `agent_session` was recorded normally and the restart then typed no resume command at all, failing with `Herdr did not resume the recorded Devin session after the restart` over an empty pane (2026-09-25, CI job 108181849264).
+A local 0.7.4 client cannot refresh that observation: with a 0.9.1 server daemon already serving the lab session, `herdr status --json` reports `"compatible":false` and the stand-in's `pane report-agent-session` never lands, so the run stops at `Herdr never recorded the stand-in Devin session` before reaching any restart assertion.
 
 ### Not verified
 
