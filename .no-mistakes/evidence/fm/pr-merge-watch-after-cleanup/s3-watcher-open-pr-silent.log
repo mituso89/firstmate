@@ -1,0 +1,12 @@
+$ bin/fm-watch.sh  (one cycle, real gh, kept watch on OPEN PR #3; z-stop is a lab control check that ends the cycle)
+check: /tmp/fm-lab.kXcoua/state/z-stop.check.sh: stop-cycle
+rc=0
+--- kept watch still armed:
+mw-live.check.sh
+mw-live.merge-watch
+mw-live.pr-poll
+mw-live.pr-poll-registration
+--- wake queue:
+1791498700	1	check	/tmp/fm-lab.kXcoua/state/z-stop.check.sh	check: /tmp/fm-lab.kXcoua/state/z-stop.check.sh: stop-cycle
+$ bash state/mw-live.check.sh   (the kept poll itself, real gh, PR #3 OPEN)
+rc=0 output=[]

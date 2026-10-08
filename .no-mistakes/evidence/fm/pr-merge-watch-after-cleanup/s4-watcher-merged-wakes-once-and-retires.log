@@ -1,0 +1,20 @@
+$ gh pr view https://github.com/mituso89/firstmate/pull/1 --json state (real)
+MERGED
+=== cycle 1: bin/fm-watch.sh
+check: /tmp/fm-lab.kXcoua/state/mw-merged.check.sh: merged
+rc=0
+--- wake queue:
+1791498744	2	check	merged-mw-merged-https://github.com/mituso89/firstmate/pull/1	check: merge landed: mw-merged https://github.com/mituso89/firstmate/pull/1 external
+--- mw-merged artifacts left:
+(none - watch retired itself)
+--- other kept watch (mw-live, PR #3 open) untouched:
+mw-live.check.sh
+mw-live.merge-watch
+mw-live.pr-poll
+mw-live.pr-poll-registration
+acked through 2
+=== cycle 2: bin/fm-watch.sh (must not wake for mw-merged again)
+check: /tmp/fm-lab.kXcoua/state/z-stop.check.sh: stop-cycle
+rc=0
+1791498754	3	check	/tmp/fm-lab.kXcoua/state/z-stop.check.sh	check: /tmp/fm-lab.kXcoua/state/z-stop.check.sh: stop-cycle
+acked through 3

@@ -1,0 +1,45 @@
+$ gh pr view https://github.com/mituso89/firstmate/pull/3 --json state,isDraft  (real GitHub)
+{"isDraft":false,"state":"OPEN"}
+$ bin/fm-pr-check.sh mw-live https://github.com/mituso89/firstmate/pull/3
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+armed: state/mw-live.check.sh
+rc=0
+--- state after arming
+mw-live.check.sh
+mw-live.git-hooks
+mw-live.meta
+mw-live.pr-poll
+mw-live.pr-poll-registration
+$ bin/fm-teardown.sh mw-live
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /tmp/fm-lab.kXcoua
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+teardown: reaping leaked worktree process(es) for mw-live: 799862 802943
+A new version of treehouse is available: v2.3.0 → v3.1.2
+Run "treehouse update" to update
+
+🌳 Worktree returned to pool.
+merge watch kept: https://github.com/mituso89/firstmate/pull/3
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+mwproj: already current
+teardown mw-live complete (window primary:fm-mw-live, worktree /home/mitu/.treehouse/mwproj-629d18/1/mwproj)
+Backlog: mw-live just finished (this home keeps no markdown backlog at /tmp/fm-lab.kXcoua/data/backlog.md). Update /tmp/fm-lab.kXcoua/data/backlog.md - move mw-live to Done, keep Done to the 10 most recent, then re-scan Queued and dispatch only work whose blockers are gone and date is due.
+rc=0
+--- state after teardown
+-rw------- 1 mitu mitu 7587 Oct  9 05:31 mw-live.check.sh
+-rw------- 1 mitu mitu  113 Oct  9 05:31 mw-live.merge-watch
+-rw------- 1 mitu mitu   84 Oct  9 05:31 mw-live.pr-poll
+-rw------- 1 mitu mitu  275 Oct  9 05:31 mw-live.pr-poll-registration
+--- state/mw-live.merge-watch
+fm-pr-merge-watch-v1
+mw-live
+github
+https://github.com/mituso89/firstmate/pull/3
+github.com
+mituso89/firstmate
+3

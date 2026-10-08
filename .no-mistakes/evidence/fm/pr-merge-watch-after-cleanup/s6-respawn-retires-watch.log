@@ -1,0 +1,20 @@
+=== refused re-spawn (pending backlog close) on id mw-live:
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /tmp/fm-lab.kXcoua
+error: task mw-live has a pending authoritative backlog close at /tmp/fm-lab.kXcoua/state/mw-live.backlog-close; finish or repair that close before dispatching a new worker
+SPAWN_RC=1
+--- state after refused spawn (watch intact):
+mw-live.backlog-close
+mw-live.check.sh
+mw-live.merge-watch
+mw-live.pr-poll
+mw-live.pr-poll-registration
+=== clean re-spawn on id mw-live:
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /tmp/fm-lab.kXcoua
+merge watch retired: https://github.com/mituso89/firstmate/pull/3 - continue on that PR and re-arm it with bin/fm-pr-check.sh mw-live https://github.com/mituso89/firstmate/pull/3
+spawned mw-live harness=sleep kind=ship mode=no-mistakes yolo=off window=primary:fm-mw-live worktree=/home/mitu/.treehouse/mwproj-629d18/1/mwproj
+SPAWN_RC=0
+--- state after re-spawn:
+mw-live.git-hooks
+mw-live.meta
+--- pr= in new meta?
+(no pr= at birth)

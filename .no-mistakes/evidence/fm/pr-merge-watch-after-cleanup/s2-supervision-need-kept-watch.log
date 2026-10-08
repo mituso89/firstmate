@@ -1,0 +1,23 @@
+=== isolate: move the unrelated contributions check aside so only the kept merge watch remains
+home-summary.json
+mw-live.check.sh
+mw-live.merge-watch
+mw-live.pr-poll
+mw-live.pr-poll-registration
+terminal-outcomes
+$ bin/fm-guard.sh
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+rc=0
+=== negative control: also move the kept watch record aside (check.sh alone, no record)
+$ bin/fm-guard.sh
+rc=0 (no output expected)
+=== restored record
+$ bin/fm-guard.sh
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 kept merge watch(es), but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+rc=0

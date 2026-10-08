@@ -1,0 +1,16 @@
+$ gh pr view https://github.com/cli/cli/pull/14617 --json state,mergedAt (real)
+{"mergedAt":null,"state":"CLOSED"}
+seeded kept merge watch mw-closed -> https://github.com/cli/cli/pull/14617
+=== cycle 1: bin/fm-watch.sh
+check: /tmp/fm-lab.kXcoua/state/mw-closed.check.sh: closed
+rc=0
+--- wake queue:
+1791498765	4	check	closed-mw-closed-https://github.com/cli/cli/pull/14617	check: PR closed without merging: mw-closed https://github.com/cli/cli/pull/14617
+--- mw-closed artifacts left:
+(none - watch retired itself)
+acked through 4
+=== cycle 2
+check: /tmp/fm-lab.kXcoua/state/z-stop.check.sh: stop-cycle
+rc=0
+1791498772	5	check	/tmp/fm-lab.kXcoua/state/z-stop.check.sh	check: /tmp/fm-lab.kXcoua/state/z-stop.check.sh: stop-cycle
+acked through 5
