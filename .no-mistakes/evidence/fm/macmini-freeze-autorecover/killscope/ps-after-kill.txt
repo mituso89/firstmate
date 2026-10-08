@@ -1,0 +1,7 @@
+--- ps after kill (shell 865329, wrapper 878848, agent 878852, outside sentinel 868038)
+    PID    PPID STAT COMMAND
+ 865329  862634 Ss+  /usr/bin/zsh
+ 868038     955 SN   sleep 3600
+--- herdr pane list after kill
+{"pane_id":"w1:p1","agent_status":"unknown"}
+{"shell_pid":865329,"fg":[{"pid":865329,"name":"zsh"}]}

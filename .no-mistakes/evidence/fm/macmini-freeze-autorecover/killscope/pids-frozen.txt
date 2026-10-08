@@ -1,0 +1,5 @@
+    PID    PPID STAT     TIME COMMAND
+ 865329  862634 Ss   00:00:02 /usr/bin/zsh
+ 868038     955 SN   00:00:00 sleep 3600
+ 878848  865329 S+   00:00:00 sh -c claude --model haiku --permission-mode bypassPermissions; true
+ 878852  878848 Tl+  00:00:04 claude --model haiku --permission-mode bypassPermissions

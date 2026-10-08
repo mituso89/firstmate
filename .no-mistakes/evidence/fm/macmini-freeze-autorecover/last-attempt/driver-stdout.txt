@@ -1,0 +1,18 @@
+22:47:49 tick=0 mode=full status=alive state=alive kill=0 wedge=baseline record=[fm-lab-wedge12m-301279-3492:w1:p1 working 3 0 600cs 1791474469 1791474469]
+22:48:48 tick=1 mode=poll status=alive state=alive kill=0 wedge=progressing record=[fm-lab-wedge12m-301279-3492:w1:p1 working 3 0 600cs 1791474469 1791474528]
+22:49:48 tick=2 mode=poll status=alive state=alive kill=0 wedge=progressing record=[fm-lab-wedge12m-301279-3492:w1:p1 working 3 0 600cs 1791474469 1791474588]
+22:50:47 tick=3 mode=poll status=alive state=alive kill=0 wedge=progressing record=[fm-lab-wedge12m-301279-3492:w1:p1 working 3 0 600cs 1791474469 1791474647]
+22:51:46 tick=4 mode=poll status=alive state=alive kill=0 wedge=progressing record=[fm-lab-wedge12m-301279-3492:w1:p1 working 3 0 600cs 1791474469 1791474706]
+22:52:45 tick=5 mode=poll status=alive state=alive kill=0 wedge=progressing record=[fm-lab-wedge12m-301279-3492:w1:p1 working 3 0 600cs 1791474469 1791474764]
+22:53:44 tick=6 mode=poll status=alive state=alive kill=0 wedge=progressing record=[fm-lab-wedge12m-301279-3492:w1:p1 working 3 0 600cs 1791474469 1791474824]
+22:54:44 tick=7 mode=poll status=alive state=alive kill=0 wedge=progressing record=[fm-lab-wedge12m-301279-3492:w1:p1 working 3 0 600cs 1791474469 1791474884]
+22:55:43 tick=8 mode=poll status=alive state=alive kill=0 wedge=progressing record=[fm-lab-wedge12m-301279-3492:w1:p1 working 3 0 600cs 1791474469 1791474943]
+22:56:42 tick=9 mode=poll status=alive state=alive kill=0 wedge=progressing record=[fm-lab-wedge12m-301279-3492:w1:p1 working 3 0 600cs 1791474469 1791475002]
+22:57:42 tick=10 mode=poll status=alive state=alive kill=0 wedge=progressing record=[fm-lab-wedge12m-301279-3492:w1:p1 working 3 0 600cs 1791474469 1791475062]
+22:58:41 tick=11 mode=poll status=relaunchable state=wedged kill=wedged wedge=wedged record=[fm-lab-wedge12m-301279-3492:w1:p1 working 3 0 600cs 1791474469 1791475121]
+22:58:41 tick=11 cause="agent wedged: running but no progress for at least 600s" where=backend=herdr recent_attempts=0
+22:58:43 tick=11 relaunch rc=0 status=relaunchable reason="" capture=/tmp/fm-lab.jSM1vw/state/.wedge-sample-smlab-1791475122.txt killed=[309690]
+22:58:43 tick=11 spawn output: lab fake spawn recorded
+22:58:43 tick=11 post-kill ps:  366019 SN   fm-wedgelab-sentinel 3600;
+22:58:43 tick=11 post-relaunch panes: {"id":"cli:pane:list","result":{"panes":[],"type":"pane_list"}} 
+22:58:43 DONE after recovery

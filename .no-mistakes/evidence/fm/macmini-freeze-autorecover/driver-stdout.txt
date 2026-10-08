@@ -1,0 +1,4 @@
+21:45:51 tick=0  mode=full sm-frozen status=alive        state=alive  wedge=baseline    record=[target seq offset cpu since seen: fm-lab-wedge-live-2174665-10920:w1:p1 working 19 0 200cs 1791470751 1791470751]
+21:45:52 tick=0  mode=full sm-busy   status=alive        state=alive  wedge=baseline    record=[target seq offset cpu since seen: fm-lab-wedge-live-2174665-10920:w1:p2 working 14 0 2100cs 1791470752 1791470752]
+21:46:52 tick=1  mode=poll sm-frozen status=alive        state=alive  wedge=progressing record=[target seq offset cpu since seen: fm-lab-wedge-live-2174665-10920:w1:p1 working 19 0 200cs 1791470751 1791470812]
+21:46:52 tick=1  mode=poll sm-busy   status=alive        state=alive  wedge=progressing record=[target seq offset cpu since seen: fm-lab-wedge-live-2174665-10920:w1:p2 working 14 0 2400cs 1791470812 1791470812]

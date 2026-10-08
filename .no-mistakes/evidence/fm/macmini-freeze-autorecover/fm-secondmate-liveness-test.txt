@@ -1,0 +1,41 @@
+ok - fm_backend_tmux_agent_state: separates live, dead, missing, ambiguous, and unreadable
+ok - fm_backend_tmux_agent_state: rejects malformed targets before probing tmux
+ok - fm_backend_herdr_agent_state: preserves missing/no-agent/live/unknown husk behavior
+ok - fm_backend_agent_state: routes tmux/Herdr and keeps Zellij unverified
+ok - sweep: a confirmed-dead secondmate endpoint is killed and respawned
+ok - sweep: an already-live secondmate is untouched and distinguishable in verbose diagnostics
+ok - sweep: an authoritatively missing Pi secondmate window is relaunched
+ok - sweep: an authoritatively missing pi-signed secondmate window is relaunched
+ok - sweep: an existing ambiguous Pi process prevents duplicate recovery
+ok - sweep: transient target unreadability never licenses recovery
+ok - sweep: failed relaunch diagnostics distinguish a confidently missing endpoint
+ok - sweep: an unverified harness blocks recovery with a concrete diagnostic
+ok - sweep: idempotent by construction - a live secondmate is never re-touched on a later run
+ok - sweep: skipped entirely under FM_BOOTSTRAP_DETECT_ONLY=1, exactly like the other mutating sweeps
+ok - sweep: a silent no-op with no kind=secondmate meta present (a secondmate home's own natural scoping)
+ok - sweep: a mate mid-episode under the shared liveness lock is skipped entirely
+ok - sweep: an unreadable or unwritable relaunch ledger refuses to kill or spawn
+ok - poll probe: remote states map to the same contract as local, one call each plus the alive wedge probe
+ok - poll probe: unreachable or inconclusive remote reads preserve the route
+ok - poll probe: a remote wedged verdict is relaunchable as wedged, and an unreachable wedge probe is not
+ok - wedge recover: a remote mate is captured and killed only by its own host's control verb, and a failed call preserves it
+ok - wedge: CPU time parses both the macOS and the Linux cputime format, and refuses anything else
+ok - wedge: the configured no-progress window honors a floor, an off switch, and warns on a typo
+ok - wedge: an unattributable agent process refuses the kill and preserves the endpoint
+ok - wedge: wedged relaunches consume the existing bounded attempt budget, so a misdetection cannot kill-loop
+ok - wedge: a working pane advancing either progress counter is never wedged
+ok - wedge: a working pane whose CPU time rises is never wedged, however quiet its output
+ok - wedge: a working pane running a long quiet tool command is never wedged
+ok - wedge: an MCP server child is not mistaken for live work, so the frozen shape still wedges
+ok - wedge: an unobserved gap (suspend or clock jump) restarts the window instead of killing live work
+ok - wedge: the observed-sample gap widens with a slow watcher cadence instead of disabling recovery
+ok - wedge: a macOS-format CPU time reading drives the verdict instead of reading unreadable
+ok - wedge: a recorded CPU sample in an older unit restarts the window rather than reading unchanged
+ok - wedge: a wedged verdict needs the configured no-progress window to elapse in full
+ok - wedge: an idle, done, or blocked agent is never treated as wedged
+ok - wedge: an unreadable counter, CPU time, or process table disables recovery instead of authorizing a kill
+ok - wedge: the session-start sweep re-bases the window and never produces a verdict
+ok - wedge: SIGKILL reaches only the pane's own agent pid, never its shell or a process outside the subtree
+ok - wedge: recovery captures live-process evidence before the kill and records its path in the ledger
+ok - probe: a wedged herdr secondmate is relaunchable on the watcher tick only, and an off window disables it
+# all fm-secondmate-liveness tests passed

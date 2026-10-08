@@ -1,0 +1,3 @@
+wedge_recover rc=0 capture=/tmp/fm-lab.DGwCrJ/state/.wedge-sample-smks-1791475296.txt killed=[878852] reason=[]
+--- ledger
+1791475297	wedge-capture	/tmp/fm-lab.DGwCrJ/state/.wedge-sample-smks-1791475296.txt

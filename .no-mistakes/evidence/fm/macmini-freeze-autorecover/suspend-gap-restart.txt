@@ -1,0 +1,4 @@
+max sample gap = 5s (FM_HERDR_WEDGE_MAX_SAMPLE_GAP_SECS=5, no tick cadence set); frozen pane fm-lab-wedge-live-2174665-10920:w1:p1
+21:46:09 sample1 verdict=progressing record: fm-lab-wedge-live-2174665-10920:w1:p1 working 19 0 200cs 1791470769 1791470769
+21:46:12 sample2 (+3s, within gap) verdict=progressing record: fm-lab-wedge-live-2174665-10920:w1:p1 working 19 0 200cs 1791470769 1791470773
+21:46:21 sample3 (+9s, gap > 5s: simulated suspend) verdict=progressing record: fm-lab-wedge-live-2174665-10920:w1:p1 working 19 0 200cs 1791470781 1791470781

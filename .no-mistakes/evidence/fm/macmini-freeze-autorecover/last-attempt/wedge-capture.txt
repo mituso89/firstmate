@@ -1,0 +1,186 @@
+wedged secondmate smlab
+captured: 2026-10-08T22:58:42+0700
+uname: Linux Access-CDH8VL3 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+pids: 309690
+
+===== pid 309690 =====
+--- /proc/309690/status ---
+Name:	claude
+Umask:	0002
+State:	T (stopped)
+Tgid:	309690
+Ngid:	0
+Pid:	309690
+PPid:	309689
+TracerPid:	0
+Uid:	1000	1000	1000	1000
+Gid:	1000	1000	1000	1000
+FDSize:	1024
+Groups:	4 24 27 30 46 100 989 1000 
+NStgid:	309690
+NSpid:	309690
+NSpgid:	309689
+NSsid:	306657
+Kthread:	0
+VmPeak:	 9755436 kB
+VmSize:	 5610276 kB
+VmLck:	       0 kB
+VmPin:	       0 kB
+VmHWM:	  302644 kB
+VmRSS:	  295868 kB
+RssAnon:	  165976 kB
+RssFile:	  129892 kB
+RssShmem:	       0 kB
+VmData:	 5521808 kB
+VmStk:	     136 kB
+VmExe:	   61216 kB
+VmLib:	    2272 kB
+VmPTE:	    1104 kB
+VmSwap:	       0 kB
+HugetlbPages:	       0 kB
+CoreDumping:	0
+THP_enabled:	1
+untag_mask:	0xffffffffffffffff
+Threads:	17
+SigQ:	2/47811
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+SigBlk:	0000000000004000
+SigIgn:	0000000000001000
+SigCgt:	000000017b826cff
+CapInh:	0000000000000000
+CapPrm:	0000000000000000
+CapEff:	0000000000000000
+CapBnd:	000001ffffffffff
+CapAmb:	0000000000000000
+NoNewPrivs:	0
+Seccomp:	0
+Seccomp_filters:	0
+Speculation_Store_Bypass:	thread vulnerable
+SpeculationIndirectBranch:	conditional enabled
+Cpus_allowed:	3f
+Cpus_allowed_list:	0-5
+Mems_allowed:	00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001
+Mems_allowed_list:	0
+voluntary_ctxt_switches:	3093
+nonvoluntary_ctxt_switches:	865
+--- per-thread wchan/stat ---
+309690 wchan=do_signal_stop stat=T
+309692 wchan=do_signal_stop stat=T
+309720 wchan=do_signal_stop stat=Pool
+309721 wchan=do_signal_stop stat=Pool
+309736 wchan=do_signal_stop stat=Pool
+309737 wchan=do_signal_stop stat=Pool
+309746 wchan=do_signal_stop stat=Client)
+309749 wchan=do_signal_stop stat=Pool
+309750 wchan=do_signal_stop stat=Pool
+309763 wchan=do_signal_stop stat=T
+358694 wchan=do_signal_stop stat=T
+358695 wchan=do_signal_stop stat=T
+358696 wchan=do_signal_stop stat=T
+358697 wchan=do_signal_stop stat=T
+358698 wchan=do_signal_stop stat=T
+360667 wchan=do_signal_stop stat=T
+360668 wchan=do_signal_stop stat=T
+--- open files ---
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/182eb75b2238506eb15f6a05f4bdfbd93d72fa0f919443d3dd3cd337375afd10
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/bc653b3851e84345e39887c19eaa810d6a2b8f86582ce965cdac86d3445dbab9
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/4950b4ad6c14
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/92a587dabacc
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/ac8680aaabfefd829f5617e9fe84cffb0f680643f0dbaf7c360305a92fcb32ba
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/490d7f302ae1
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/a75dac03f98980f65673cbebceffa9519a0b4e4f5e85889a576a1987cd425895
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/f3a8bc11289dc1cc0f790459fc9537d0e067d2920752ebc4335aa1827ea65bbe
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/5682784e45b8
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/1319c185708a
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/5d63f6b6e973b186f31af69b70a1874efc3559fdcbbab92ba57f03882e2cce05
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/f4d2de379826
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/7d4f3cdc2764206e2fda987a4180fa8ac70095cd6a29f20329899f04859e7d80
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/f4d41bc37ef9
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/7e0f0c9a2807aa920bd3ccc481a415b1aee8e9c2c206296e3e792954216c4bf8
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/5119e162e1e0
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/a06624d0447983dc91fa76c59ac5d87318a39d0aae8a23581553ec370b10e8b3
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/96439f3021c3
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/3cbca47a969eb19e5e4a6c976e75e4a6d157ece0ff1944ce8b047d05e9708fd0
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/f71f1e32f659
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/0b80696a534e851e24cd7daf9fafe5d6ade4ba11ae2fbc8e73f74aa4cc0c76b4
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/137e5c19fc1d
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/08c9401eac98da4d005be55ca12980fe5e926fefb7b29943bd44e036a31acd94
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/da75b81de49d
+      Output information may be incomplete.
+COMMAND    PID USER   FD      TYPE             DEVICE  SIZE/OFF      NODE NAME
+claude  309690 mitu  cwd       DIR               8,48      4096   1733341 /tmp/fm-lab.jSM1vw/mate
+claude  309690 mitu  rtd       DIR               8,48      4096         2 /
+claude  309690 mitu  txt       REG               8,48 252755128   1731010 /home/mitu/.local/share/claude/versions/2.1.294
+claude  309690 mitu  mem       REG               8,48   2129424   2416593 /usr/lib/x86_64-linux-gnu/libc.so.6
+claude  309690 mitu  mem       REG               8,48    952616   2416619 /usr/lib/x86_64-linux-gnu/libm.so.6
+claude  309690 mitu  mem       REG               8,48     14408   2416597 /usr/lib/x86_64-linux-gnu/libdl.so.2
+claude  309690 mitu  mem       REG               8,48     14408   2416629 /usr/lib/x86_64-linux-gnu/libpthread.so.0
+claude  309690 mitu  mem       REG               8,48     14624   2416631 /usr/lib/x86_64-linux-gnu/librt.so.1
+claude  309690 mitu  mem       REG               8,48    236616   2416581 /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+claude  309690 mitu    0u      CHR              136,0       0t0         3 /dev/pts/0
+claude  309690 mitu    1u      CHR              136,0       0t0         3 /dev/pts/0
+claude  309690 mitu    2u      CHR              136,0       0t0         3 /dev/pts/0
+claude  309690 mitu    3u  a_inode               0,15         0      2060 [eventpoll:4,7,8,14,15,17,18,21,22,23,24,27,31,34,39,41,42,43,44,46,48]
+claude  309690 mitu    4u  a_inode               0,15         0      2060 [eventfd:198]
+claude  309690 mitu    5r      CHR                1,9       0t0         8 /dev/urandom
+claude  309690 mitu    6r      REG               0,59         0 111942647 /proc/309690/statm
+claude  309690 mitu    7r      CHR              136,0       0t0         3 /dev/pts/0
+claude  309690 mitu    8u      CHR              136,0       0t0         3 /dev/pts/0
+claude  309690 mitu    9u  a_inode               0,15         0      2060 [eventpoll:10,11,20,25,26,28,29,30,32,33,35]
+claude  309690 mitu   10u  a_inode               0,15         0      2060 [eventfd:199]
+claude  309690 mitu   11u     sock                0,8       0t0 111944247 protocol: TCP
+claude  309690 mitu   12u  a_inode               0,15         0      2060 [eventpoll:13]
+claude  309690 mitu   13u  a_inode               0,15         0      2060 [eventfd:200]
+claude  309690 mitu   14u     unix 0x0000000000000000       0t0 111945209 /run/user/1000/cc-socks/309690.sock type=STREAM (LISTEN)
+claude  309690 mitu   15u      CHR              136,0       0t0         3 /dev/pts/0
+claude  309690 mitu   16w      CHR              136,0       0t0         3 /dev/pts/0
+claude  309690 mitu   17u     sock                0,8       0t0 111947793 protocol: TCP
+claude  309690 mitu   18u     sock                0,8       0t0 111947791 protocol: TCP
+claude  309690 mitu   19r  a_inode               0,15         0      2060 inotify
+claude  309690 mitu   20u     sock                0,8       0t0 111951260 protocol: TCP
+claude  309690 mitu   21u     sock                0,8       0t0 111950227 protocol: TCP
+claude  309690 mitu   22u     sock                0,8       0t0 111950228 protocol: TCP
+claude  309690 mitu   23u     sock                0,8       0t0 111948549 protocol: TCP
+claude  309690 mitu   24u     sock                0,8       0t0 111949713 protocol: TCP
+claude  309690 mitu   25u     sock                0,8       0t0 111948696 protocol: TCP
+claude  309690 mitu   26u     sock                0,8       0t0 111948698 protocol: TCP
+claude  309690 mitu   27u     unix 0x0000000000000000       0t0 111948557 type=STREAM (CONNECTED)
+claude  309690 mitu   28u     sock                0,8       0t0 111948700 protocol: TCP
+claude  309690 mitu   29u     sock                0,8       0t0 111948702 protocol: TCP
+claude  309690 mitu   30u     sock                0,8       0t0 111948704 protocol: TCP
+claude  309690 mitu   31u     sock                0,8       0t0 111953219 protocol: TCP
+claude  309690 mitu   32u     sock                0,8       0t0 111950480 protocol: TCP
+claude  309690 mitu   33u     sock                0,8       0t0 111952349 protocol: TCP
+claude  309690 mitu   34u     sock                0,8       0t0 111948550 protocol: TCP
+claude  309690 mitu   35u     sock                0,8       0t0 112021947 protocol: TCP
+claude  309690 mitu   39u  a_inode               0,15         0      2060 [pidfd:313272]
+claude  309690 mitu   41u     unix 0x0000000000000000       0t0 111948558 type=STREAM (CONNECTED)
+claude  309690 mitu   42u     unix 0x0000000000000000       0t0 111949701 type=STREAM (CONNECTED)
+claude  309690 mitu   43u     unix 0x0000000000000000       0t0 111948560 type=STREAM (CONNECTED)
+claude  309690 mitu   44u     unix 0x0000000000000000       0t0 111949702 type=STREAM (CONNECTED)
+claude  309690 mitu   46u     unix 0x0000000000000000       0t0 111949704 type=STREAM (CONNECTED)
+claude  309690 mitu   48u  a_inode               0,15         0      2060 [pidfd:313284]

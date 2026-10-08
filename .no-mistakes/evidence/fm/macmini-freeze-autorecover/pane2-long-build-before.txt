@@ -1,0 +1,40 @@
+
+  Two options I can do:
+  1. Use Monitor with a real condition to wait on, for example a file that gets written or a process that exits.
+  2. If you have a specific command that takes a long time, I can run that one in the foreground and it won't be a pure
+     wait.
+
+✻ Cooked for 1s · done 9:42 PM
+
+❯ Run ./build.sh in the foreground with the Bash tool (timeout 1200000 ms). It is a slow build step that prints
+  nothing. Then reply ok.
+
+  Ran 1 shell command
+
+● I can't reply "ok". ./build.sh exited with code 143, which means it was stopped by a SIGTERM signal before it
+  finished. The build did not complete.
+
+  This matches the earlier background sleep 900, which also exited with 143. Something outside the build is likely
+  ending long foreground commands at about this point. I haven't confirmed the cause or checked whether build.sh itself
+  failed.
+
+  Next steps I can take:
+  1. Run ./build.sh in the background and redirect its output to a log file, so I can check whether it finishes.
+  2. Look at build.sh to see what it does and whether it has its own timeout or signal handling.
+
+✻ Cooked for 1m 7s · done 9:43 PM
+
+❯ That build step was interrupted by a test harness. Run ./build.sh again in the foreground with the Bash tool (timeout
+  1800000 ms) and wait for it. Then reply ok.
+
+  Rerunning build.sh in the project directory in foreground · 1m 48s
+  ⎿  $ ./build.sh (1m 47s)
+     (ctrl+b to run in background)
+
+· Recombobulating… (1m 50s · ↓ 290 tokens)
+  ⎿  Tip: Use /config to change your default permission mode (including Plan Mode)
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle) · esc to interrupt · ← for agents

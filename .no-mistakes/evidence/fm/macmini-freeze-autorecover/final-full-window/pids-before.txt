@@ -1,0 +1,12 @@
+lab session: fm-lab-wedgefinal-3638766-936 (pane w1:p1), lab home: /tmp/fm-lab.XTS7D0
+pane shell pid: 3651891 (zsh)
+sh wrapper pid: 3750881
+frozen claude pid: 3750882 (SIGSTOPped, then SIGTERM sent and left pending)
+herdr lab server pid: 3647418
+outside-pane sentinel pid: 3774035
+    PID STAT %CPU     TIME COMMAND
+3647418 Sl    0.4 00:00:00 herdr server --session fm-lab-wedgefinal-3638766-936
+3651891 Ss    0.7 00:00:01 /usr/bin/zsh
+3750881 S+    0.0 00:00:00 sh -c claude --model haiku --permission-mode bypassPermissions; true
+3750882 Tl+  14.2 00:00:05 claude --model haiku --permission-mode bypassPermissions
+3774035 SN    0.0 00:00:00 fm-wedgelab-sentinel 3600

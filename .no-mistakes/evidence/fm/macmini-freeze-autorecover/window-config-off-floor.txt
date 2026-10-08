@@ -1,0 +1,8 @@
+--- config/secondmate-wedge-window = off (frozen working pane)
+status=alive state=alive wedge=[] record_exists=no
+--- config/secondmate-wedge-window = 60 (below the 600s floor)
+warning: <labhome>/config/secondmate-wedge-window: 60s is below the 600s floor a wedge verdict needs to stay clear of ordinary long model responses; using the 900s default instead
+effective window: 900
+--- config/secondmate-wedge-window = soon (typo)
+warning: <labhome>/config/secondmate-wedge-window: unrecognized value "soon"; using the 900s default no-progress window (write a whole number of seconds of at least 600, or "off" to disable wedge recovery)
+effective window: 900

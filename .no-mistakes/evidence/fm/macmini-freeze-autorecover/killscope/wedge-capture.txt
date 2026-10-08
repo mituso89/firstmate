@@ -1,0 +1,194 @@
+wedged secondmate smks
+captured: 2026-10-08T23:01:36+0700
+uname: Linux Access-CDH8VL3 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+pids: 878852
+
+===== pid 878852 =====
+--- /proc/878852/status ---
+Name:	claude
+Umask:	0002
+State:	T (stopped)
+Tgid:	878852
+Ngid:	0
+Pid:	878852
+PPid:	878848
+TracerPid:	0
+Uid:	1000	1000	1000	1000
+Gid:	1000	1000	1000	1000
+FDSize:	1024
+Groups:	4 24 27 30 46 100 989 1000 
+NStgid:	878852
+NSpid:	878852
+NSpgid:	878848
+NSsid:	865329
+Kthread:	0
+VmPeak:	 9755436 kB
+VmSize:	 5616348 kB
+VmLck:	       0 kB
+VmPin:	       0 kB
+VmHWM:	  353656 kB
+VmRSS:	  343444 kB
+RssAnon:	  210152 kB
+RssFile:	  133292 kB
+RssShmem:	       0 kB
+VmData:	 5527876 kB
+VmStk:	     136 kB
+VmExe:	   61216 kB
+VmLib:	    2272 kB
+VmPTE:	    1316 kB
+VmSwap:	       0 kB
+HugetlbPages:	       0 kB
+CoreDumping:	0
+THP_enabled:	1
+untag_mask:	0xffffffffffffffff
+Threads:	19
+SigQ:	1/47811
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+SigBlk:	0000000000000000
+SigIgn:	0000000000001000
+SigCgt:	000000017b826cff
+CapInh:	0000000000000000
+CapPrm:	0000000000000000
+CapEff:	0000000000000000
+CapBnd:	000001ffffffffff
+CapAmb:	0000000000000000
+NoNewPrivs:	0
+Seccomp:	0
+Seccomp_filters:	0
+Speculation_Store_Bypass:	thread vulnerable
+SpeculationIndirectBranch:	conditional enabled
+Cpus_allowed:	3f
+Cpus_allowed_list:	0-5
+Mems_allowed:	00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001
+Mems_allowed_list:	0
+voluntary_ctxt_switches:	1607
+nonvoluntary_ctxt_switches:	604
+--- per-thread wchan/stat ---
+878852 wchan=do_signal_stop stat=T
+878856 wchan=do_signal_stop stat=T
+878857 wchan=do_signal_stop stat=T
+878885 wchan=do_signal_stop stat=Pool
+878887 wchan=do_signal_stop stat=Pool
+878943 wchan=do_signal_stop stat=Pool
+878944 wchan=do_signal_stop stat=Pool
+878951 wchan=do_signal_stop stat=Client)
+878982 wchan=do_signal_stop stat=Pool
+878983 wchan=do_signal_stop stat=Pool
+879090 wchan=do_signal_stop stat=T
+879091 wchan=do_signal_stop stat=T
+879092 wchan=do_signal_stop stat=T
+879093 wchan=do_signal_stop stat=T
+879094 wchan=do_signal_stop stat=T
+879106 wchan=do_signal_stop stat=T
+902050 wchan=do_signal_stop stat=T
+903557 wchan=do_signal_stop stat=T
+910264 wchan=do_signal_stop stat=Thread)
+--- open files ---
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/182eb75b2238506eb15f6a05f4bdfbd93d72fa0f919443d3dd3cd337375afd10
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/bc653b3851e84345e39887c19eaa810d6a2b8f86582ce965cdac86d3445dbab9
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/4950b4ad6c14
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/92a587dabacc
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/ac8680aaabfefd829f5617e9fe84cffb0f680643f0dbaf7c360305a92fcb32ba
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/490d7f302ae1
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/a75dac03f98980f65673cbebceffa9519a0b4e4f5e85889a576a1987cd425895
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/f3a8bc11289dc1cc0f790459fc9537d0e067d2920752ebc4335aa1827ea65bbe
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/5682784e45b8
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/1319c185708a
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/5d63f6b6e973b186f31af69b70a1874efc3559fdcbbab92ba57f03882e2cce05
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/f4d2de379826
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/7d4f3cdc2764206e2fda987a4180fa8ac70095cd6a29f20329899f04859e7d80
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/f4d41bc37ef9
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/7e0f0c9a2807aa920bd3ccc481a415b1aee8e9c2c206296e3e792954216c4bf8
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/5119e162e1e0
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/a06624d0447983dc91fa76c59ac5d87318a39d0aae8a23581553ec370b10e8b3
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/96439f3021c3
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/3cbca47a969eb19e5e4a6c976e75e4a6d157ece0ff1944ce8b047d05e9708fd0
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/f71f1e32f659
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/0b80696a534e851e24cd7daf9fafe5d6ade4ba11ae2fbc8e73f74aa4cc0c76b4
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/137e5c19fc1d
+      Output information may be incomplete.
+lsof: WARNING: can't stat() overlay file system /var/lib/docker/rootfs/overlayfs/08c9401eac98da4d005be55ca12980fe5e926fefb7b29943bd44e036a31acd94
+      Output information may be incomplete.
+lsof: WARNING: can't stat() nsfs file system /run/docker/netns/da75b81de49d
+      Output information may be incomplete.
+COMMAND    PID USER   FD      TYPE             DEVICE  SIZE/OFF      NODE NAME
+claude  878852 mitu  cwd       DIR               8,48      4096   1734147 /home/mitu/.no-mistakes/worktrees/503155d0277b/01M4DYNNY01YTH2XNPY8VG01KE
+claude  878852 mitu  rtd       DIR               8,48      4096         2 /
+claude  878852 mitu  txt       REG               8,48 252755128   1731010 /home/mitu/.local/share/claude/versions/2.1.294
+claude  878852 mitu  mem       REG               8,48    952616   2416619 /usr/lib/x86_64-linux-gnu/libm.so.6
+claude  878852 mitu  mem       REG               8,48   2129424   2416593 /usr/lib/x86_64-linux-gnu/libc.so.6
+claude  878852 mitu  mem       REG               8,48     14408   2416597 /usr/lib/x86_64-linux-gnu/libdl.so.2
+claude  878852 mitu  mem       REG               8,48     14408   2416629 /usr/lib/x86_64-linux-gnu/libpthread.so.0
+claude  878852 mitu  mem       REG               8,48     14624   2416631 /usr/lib/x86_64-linux-gnu/librt.so.1
+claude  878852 mitu  mem       REG               8,48    236616   2416581 /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+claude  878852 mitu    0u      CHR              136,0       0t0         3 /dev/pts/0
+claude  878852 mitu    1u      CHR              136,0       0t0         3 /dev/pts/0
+claude  878852 mitu    2u      CHR              136,0       0t0         3 /dev/pts/0
+claude  878852 mitu    3u  a_inode               0,15         0      2060 [eventpoll:4,7,8,13,14,15,16,18,20,21,25,26,27,34,38,43,49,50,57,60,61,63,65]
+claude  878852 mitu    4u  a_inode               0,15         0      2060 [eventfd:195]
+claude  878852 mitu    5r      CHR                1,9       0t0         8 /dev/urandom
+claude  878852 mitu    6r      REG               0,59         0 112741016 /proc/878852/statm
+claude  878852 mitu    7r      CHR              136,0       0t0         3 /dev/pts/0
+claude  878852 mitu    8u      CHR              136,0       0t0         3 /dev/pts/0
+claude  878852 mitu    9u  a_inode               0,15         0      2060 [eventpoll:10,11,17,30,31,32,33,35,36,39,40,41]
+claude  878852 mitu   10u  a_inode               0,15         0      2060 [eventfd:198]
+claude  878852 mitu   11u     IPv4          112740172       0t0       TCP 172.29.222.225:32980->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   12r  a_inode               0,15         0      2060 inotify
+claude  878852 mitu   13u     IPv4          112739068       0t0       TCP 172.29.222.225:33006->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   14u     IPv4          112753290       0t0       TCP 172.29.222.225:60146->165.66.149.34.bc.googleusercontent.com:https (ESTABLISHED)
+claude  878852 mitu   15u      CHR              136,0       0t0         3 /dev/pts/0
+claude  878852 mitu   16u     unix 0x0000000000000000       0t0 112738193 /run/user/1000/cc-socks/878852.sock type=STREAM (LISTEN)
+claude  878852 mitu   17u     IPv4          112773305       0t0       TCP 172.29.222.225:38798->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   18u     IPv4          112769777       0t0       TCP 172.29.222.225:38800->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   19u  a_inode               0,15         0      2060 [eventpoll:23,24]
+claude  878852 mitu   20u     IPv4          112738198       0t0       TCP 172.29.222.225:32990->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   21u     IPv4          112738199       0t0       TCP 172.29.222.225:33004->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   22w      CHR              136,0       0t0         3 /dev/pts/0
+claude  878852 mitu   23u  a_inode               0,15         0      2060 [eventfd:200]
+claude  878852 mitu   24u      CHR              136,0       0t0         3 /dev/pts/0
+claude  878852 mitu   25u     IPv4          112769778       0t0       TCP 172.29.222.225:38816->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   26u     IPv4          112773733       0t0       TCP 172.29.222.225:38826->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   27u     IPv4          112776220       0t0       TCP 172.29.222.225:38838->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   28u  a_inode               0,15         0      2060 [eventpoll:29]
+claude  878852 mitu   29u  a_inode               0,15         0      2060 [eventfd:199]
+claude  878852 mitu   30u     IPv4          112776265       0t0       TCP 172.29.222.225:38532->20.205.243.168:https (ESTABLISHED)
+claude  878852 mitu   31u     IPv4          112774681       0t0       TCP 172.29.222.225:38852->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   32u     IPv4          112778516       0t0       TCP 172.29.222.225:38918->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   33u     IPv4          112774683       0t0       TCP 172.29.222.225:38864->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   34u     unix 0x0000000000000000       0t0 112773741 type=STREAM (CONNECTED)
+claude  878852 mitu   35u     IPv4          112775548       0t0       TCP 172.29.222.225:38904->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   36u     IPv4          112774685       0t0       TCP 172.29.222.225:38876->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   38u     unix 0x0000000000000000       0t0 112773742 type=STREAM (CONNECTED)
+claude  878852 mitu   39u     IPv4          112774687       0t0       TCP 172.29.222.225:38880->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   40u     IPv4          112774689       0t0       TCP 172.29.222.225:38890->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   41u     IPv4          112783093       0t0       TCP 172.29.222.225:38934->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   43u     unix 0x0000000000000000       0t0 112773748 type=STREAM (CONNECTED)
+claude  878852 mitu   49u     IPv4          112773734       0t0       TCP 172.29.222.225:38832->160.79.104.10:https (ESTABLISHED)
+claude  878852 mitu   50u     IPv4          112777226       0t0       TCP 172.29.222.225:33274->17.46.190.35.bc.googleusercontent.com:https (ESTABLISHED)
+claude  878852 mitu   57u     unix 0x0000000000000000       0t0 112773744 type=STREAM (CONNECTED)
+claude  878852 mitu   60u     unix 0x0000000000000000       0t0 112773749 type=STREAM (CONNECTED)
+claude  878852 mitu   61u  a_inode               0,15         0      2060 [pidfd:904511]
+claude  878852 mitu   63u     unix 0x0000000000000000       0t0 112773751 type=STREAM (CONNECTED)
+claude  878852 mitu   65u  a_inode               0,15         0      2060 [pidfd:904520]
